@@ -12,7 +12,7 @@ interface ReportPayload {
   summary: string;
   description: string;
   metadata: {
-    videVersion?: string;
+    tuimVersion?: string;
     os?: string;
     osVersion?: string;
     kernel?: string;
@@ -101,7 +101,7 @@ async function installationToken(env: Env): Promise<string> {
     headers: {
       Accept: "application/vnd.github+json",
       Authorization: `Bearer ${await appJwt(env)}`,
-      "User-Agent": "vide-bug-report-gateway",
+      "User-Agent": "tuim-bug-report-gateway",
       "X-GitHub-Api-Version": "2026-03-10",
     },
     body: JSON.stringify({ repositories: [env.GITHUB_REPO], permissions: { issues: "write" } }),
@@ -117,7 +117,7 @@ function validReport(value: unknown): value is ReportPayload {
   const report = value as Partial<ReportPayload>;
   const metadata = report.metadata as ReportPayload["metadata"] | undefined;
   const metadataValues = metadata ? [
-    metadata.videVersion, metadata.os, metadata.osVersion, metadata.kernel,
+    metadata.tuimVersion, metadata.os, metadata.osVersion, metadata.kernel,
     metadata.architecture, metadata.displayServer, metadata.desktop,
     metadata.terminal, metadata.terminalVersion, metadata.term, metadata.shell,
   ] : [];
@@ -145,7 +145,7 @@ function issueBody(report: ReportPayload): string {
   const safe = (value?: string) => (value || "unknown").replace(/[\r\n\t]+/g, " ").slice(0, 160);
   const terminal = `${safe(report.metadata.terminal)} ${safe(report.metadata.terminalVersion)}`.trim();
   const metadata = [
-    `- VIDE: ${safe(report.metadata.videVersion)}`,
+    `- TUIM: ${safe(report.metadata.tuimVersion)}`,
     `- OS: ${safe(report.metadata.osVersion)} (${safe(report.metadata.os)})`,
     `- Kernel: ${safe(report.metadata.kernel)}`,
     `- Architecture: ${safe(report.metadata.architecture)}`,
@@ -157,7 +157,7 @@ function issueBody(report: ReportPayload): string {
     `- Debug logs authorized: ${report.logs !== null ? "yes" : "no"}`,
   ].join("\n");
   const logs = report.logs === null ? "" : `\n\n### Debug logs\n\n\`\`\`text\n${report.logs}\n\`\`\``;
-  return `### Description\n\n${report.description}\n\n### Environment\n\n${metadata}${logs}\n\n---\nSubmitted from VIDE's in-app bug reporter.`;
+  return `### Description\n\n${report.description}\n\n### Environment\n\n${metadata}${logs}\n\n---\nSubmitted from TUIM's in-app bug reporter.`;
 }
 
 async function createIssue(report: ReportPayload, env: Env): Promise<{ html_url: string; number: number }> {
@@ -167,7 +167,7 @@ async function createIssue(report: ReportPayload, env: Env): Promise<{ html_url:
       Accept: "application/vnd.github+json",
       Authorization: `Bearer ${await installationToken(env)}`,
       "Content-Type": "application/json",
-      "User-Agent": "vide-bug-report-gateway",
+      "User-Agent": "tuim-bug-report-gateway",
       "X-GitHub-Api-Version": "2026-03-10",
     },
     body: JSON.stringify({ title: `[${report.category}] ${report.summary.trim()}`, body: issueBody(report) }),
@@ -178,7 +178,7 @@ async function createIssue(report: ReportPayload, env: Env): Promise<{ html_url:
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    if (request.method === "GET") return json({ service: "VIDE bug reporting", ready: true });
+    if (request.method === "GET") return json({ service: "TUIM bug reporting", ready: true });
     if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
     if ((request.headers.get("Content-Type") ?? "").split(";", 1)[0] !== "application/json") return json({ error: "Expected JSON" }, 415);
     if (Number(request.headers.get("Content-Length") ?? "0") > 55_000) return json({ error: "Report too large" }, 413);

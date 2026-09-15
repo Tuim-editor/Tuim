@@ -1,5 +1,5 @@
 #!/bin/bash
-# Vide uninstaller
+# Tuim uninstaller
 
 set -euo pipefail
 
@@ -22,13 +22,13 @@ usage() {
 Usage: uninstall.sh [options]
 
 Options:
-  --binary     Remove ~/.local/bin/vide
-  --cache      Remove Vide cache files
-  --plugins    Remove Vide plugin data
-  --settings   Remove Vide config files
-  --logs       Remove Vide log files
-  --sessions   Remove Vide session files
-  --all        Remove every Vide file and directory
+  --binary     Remove ~/.local/bin/tuim
+  --cache      Remove Tuim cache files
+  --plugins    Remove Tuim plugin data
+  --settings   Remove Tuim config files
+  --logs       Remove Tuim log files
+  --sessions   Remove Tuim session files
+  --all        Remove every Tuim file and directory
   --yes        Skip the confirmation prompt
 EOF
 }
@@ -72,25 +72,25 @@ fi
 
 declare -a paths=()
 if [ "$REMOVE_BINARY" -eq 1 ]; then
-    paths+=("$HOME/.local/bin/vide")
+    paths+=("$HOME/.local/bin/tuim")
 fi
 if [ "$REMOVE_SETTINGS" -eq 1 ]; then
-    paths+=("${XDG_CONFIG_HOME:-$HOME/.config}/vide")
+    paths+=("${XDG_CONFIG_HOME:-$HOME/.config}/tuim")
 fi
 if [ "$REMOVE_PLUGINS" -eq 1 ]; then
-    paths+=("${XDG_DATA_HOME:-$HOME/.local/share}/vide")
+    paths+=("${XDG_DATA_HOME:-$HOME/.local/share}/tuim")
 fi
 if [ "$REMOVE_CACHE" -eq 1 ]; then
-    paths+=("${XDG_CACHE_HOME:-$HOME/.cache}/vide")
+    paths+=("${XDG_CACHE_HOME:-$HOME/.cache}/tuim")
 fi
 if [ "$REMOVE_LOGS" -eq 1 ]; then
-    paths+=("${XDG_STATE_HOME:-$HOME/.local/state}/vide/log")
+    paths+=("${XDG_STATE_HOME:-$HOME/.local/state}/tuim/log")
 fi
 if [ "$REMOVE_SESSIONS" -eq 1 ]; then
-    paths+=("${XDG_STATE_HOME:-$HOME/.local/state}/vide/sessions")
+    paths+=("${XDG_STATE_HOME:-$HOME/.local/state}/tuim/sessions")
 fi
 
-echo -e "${YELLOW}The following Vide paths will be removed:${NC}"
+echo -e "${YELLOW}The following Tuim paths will be removed:${NC}"
 for p in "${paths[@]}"; do
     echo "  $p"
 done
@@ -104,7 +104,7 @@ if [ "$ASSUME_YES" -ne 1 ]; then
     fi
 fi
 
-echo -e "${BLUE}Uninstalling Vide...${NC}"
+echo -e "${BLUE}Uninstalling Tuim...${NC}"
 for p in "${paths[@]}"; do
     if [ -e "$p" ] || [ -L "$p" ]; then
         echo "Removing $p..."
@@ -112,4 +112,4 @@ for p in "${paths[@]}"; do
     fi
 done
 
-echo -e "\n${GREEN}✔ Vide uninstall complete.${NC}"
+echo -e "\n${GREEN}✔ Tuim uninstall complete.${NC}"

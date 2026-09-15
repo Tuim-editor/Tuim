@@ -1,14 +1,14 @@
 # Architecture
 
-Vide is a Zig terminal application with an isolated Neovim editor. For product
+Tuim is a Zig terminal application with an isolated Neovim editor. For product
 behavior and shortcuts, see the [usage guide](usage.md).
 
 ## Processes and ownership
 
 `src/main.zig` starts two embedded Neovim processes through
-`src/nvim/process.zig`. Both use `NVIM_APPNAME=vide` and `--clean`:
+`src/nvim/process.zig`. Both use `NVIM_APPNAME=tuim` and `--clean`:
 
-- The editor loads `src/nvim/vide_init.lua` and owns buffers, windows, text,
+- The editor loads `src/nvim/tuim_init.lua` and owns buffers, windows, text,
   undo, diagnostics, language servers, and plugins.
 - The terminal frontend loads `src/nvim/terminal_init.lua`, without the editor
   plugin stack. Its shell starts when the integrated terminal is first opened.
@@ -48,7 +48,7 @@ list and details pane, with a compact details view in smaller terminals.
 
 ## Configuration and plugins
 
-Settings are persisted in Vide's data directory. Normal and IDE share the
+Settings are persisted in Tuim's data directory. Normal and IDE share the
 workspace; IDE applies modeless mappings to editable buffers. Zen hides the
 workspace while preserving a return footer and the previous editing mode.
 
@@ -58,7 +58,7 @@ offline inventory, and lifecycle changes. Its stdout is a JSON interface.
 
 Plugin state is stored separately from code:
 
-| File or directory in Vide's data directory | Purpose |
+| File or directory in Tuim's data directory | Purpose |
 | --- | --- |
 | `settings.json` | Native application preferences |
 | `user_plugins.json` | Marketplace additions |
@@ -76,7 +76,7 @@ See [plugin compatibility](plugin-compatibility.md) for operational details.
 
 ## Storage and failure boundaries
 
-Vide uses its own `vide` subdirectory under each XDG config, data, state, and
+Tuim uses its own `tuim` subdirectory under each XDG config, data, state, and
 cache location. It does not load the user's regular Neovim configuration.
 Normal upgrades preserve settings and plugin data.
 

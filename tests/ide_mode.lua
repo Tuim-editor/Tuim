@@ -1,8 +1,8 @@
-assert(type(_G.vide_enable_ide_mode) == 'function')
-assert(type(_G.vide_disable_ide_mode) == 'function')
-assert(type(_G.vide_ide_action) == 'function')
-assert(type(_G.vide_close_buffer) == 'function')
-assert(type(_G.vide_close_floating_windows) == 'function')
+assert(type(_G.tuim_enable_ide_mode) == 'function')
+assert(type(_G.tuim_disable_ide_mode) == 'function')
+assert(type(_G.tuim_ide_action) == 'function')
+assert(type(_G.tuim_close_buffer) == 'function')
+assert(type(_G.tuim_close_floating_windows) == 'function')
 assert(vim.fn.maparg(' ot', 'n') ~= '', 'missing bottom terminal split mapping: <Space> o t')
 assert(vim.fn.maparg(' oT', 'n') ~= '', 'missing vertical terminal split mapping: <Space> o T')
 
@@ -30,14 +30,14 @@ vim.bo[floating_buffer].modified = true
 local floating_window = vim.api.nvim_open_win(floating_buffer, true, {
   relative = 'editor', row = 1, col = 1, width = 20, height = 1, style = 'minimal',
 })
-_G.vide_close_floating_windows()
-_G.vide_close_floating_windows()
+_G.tuim_close_floating_windows()
+_G.tuim_close_floating_windows()
 assert(not vim.api.nvim_win_is_valid(floating_window))
 assert(vim.api.nvim_get_current_buf() == edited_buffer)
 assert(vim.bo[edited_buffer].modified == true)
 
-_G.vide_enable_ide_mode()
-assert(vim.g.vide_ide_mode == true)
+_G.tuim_enable_ide_mode()
+assert(vim.g.tuim_ide_mode == true)
 
 for _, lhs in ipairs({ '<Esc>', '<Home>', '<End>', '<C-Left>', '<C-Right>', '<D-Left>', '<D-Right>',
     '<S-Left>', '<S-Right>', '<S-Home>', '<S-End>', '<C-S-Left>', '<C-S-Right>' }) do
@@ -52,75 +52,75 @@ for _, lhs in ipairs({ '<C-s>', '<C-z>', '<C-y>', '<C-a>', '<C-c>', '<C-x>', '<C
   assert(vim.fn.maparg(lhs, 'i') ~= '', 'missing IDE shortcut: ' .. lhs)
 end
 
-_G.vide_ide_action('select_all')
+_G.tuim_ide_action('select_all')
 assert(vim.api.nvim_get_mode().mode:match('[vV\22]'))
 vim.cmd('normal! \27')
-_G.vide_ide_action('undo')
-_G.vide_ide_action('redo')
+_G.tuim_ide_action('undo')
+_G.tuim_ide_action('redo')
 
 vim.cmd('stopinsert')
 -- Keep this headless test independent of the host pasteboard. This also checks
 -- that IDE actions respect the user's disabled System Clipboard setting.
 vim.o.clipboard = ''
 vim.fn.setreg('"', { 'pasted from IDE' }, 'l')
-_G.vide_ide_action('paste')
+_G.tuim_ide_action('paste')
 assert(vim.api.nvim_get_current_line() == 'pasted from IDE')
 
 local first_buffer = vim.api.nvim_get_current_buf()
-_G.vide_ide_action('new')
+_G.tuim_ide_action('new')
 assert(vim.api.nvim_get_current_buf() ~= first_buffer)
-_G.vide_ide_action('previous_buffer')
+_G.tuim_ide_action('previous_buffer')
 assert(vim.api.nvim_get_current_buf() == first_buffer)
-_G.vide_ide_action('next_buffer')
+_G.tuim_ide_action('next_buffer')
 assert(vim.api.nvim_get_current_buf() ~= first_buffer)
 
 local disposable_buffer = vim.api.nvim_get_current_buf()
-assert(_G.vide_close_buffer(disposable_buffer) == true)
+assert(_G.tuim_close_buffer(disposable_buffer) == true)
 assert(not vim.api.nvim_buf_is_valid(disposable_buffer))
 assert(vim.api.nvim_get_current_buf() == first_buffer)
 
 -- First-save naming works without plugins and protects existing files.
-local original_input, original_notice = vim.ui.input, _G.vide_native_notice
+local original_input, original_notice = vim.ui.input, _G.tuim_native_notice
 local callback, notice
 vim.ui.input = function(opts, done)
   assert(opts.completion == 'file')
   callback = done
 end
-_G.vide_native_notice = function(_, message) notice = message end
+_G.tuim_native_notice = function(_, message) notice = message end
 vim.cmd('enew!')
 local unnamed = vim.api.nvim_get_current_buf()
 vim.api.nvim_buf_set_lines(0, 0, -1, false, { 'new file content' })
-_G.vide_save_file()
+_G.tuim_save_file()
 callback(nil)
 assert(vim.api.nvim_buf_get_name(unnamed) == '')
 assert(vim.bo[unnamed].modified)
-_G.vide_save_file()
+_G.tuim_save_file()
 callback('')
 assert(vim.api.nvim_buf_get_name(unnamed) == '')
-_G.vide_save_file()
+_G.tuim_save_file()
 callback(vim.fn.tempname() .. '/missing-parent/file.txt')
 assert(vim.api.nvim_buf_get_name(unnamed) == '', 'Failed first save must allow choosing another name')
 assert(vim.bo[unnamed].modified)
 local target = vim.fn.tempname() .. ' with spaces.txt'
 vim.fn.writefile({ 'existing content' }, target)
-_G.vide_save_file()
+_G.tuim_save_file()
 callback(target)
 assert(vim.fn.readfile(target)[1] == 'existing content')
 assert(vim.api.nvim_buf_get_name(unnamed) == '')
 assert(notice:find('already exists', 1, true))
 vim.fn.delete(target)
-_G.vide_save_file()
+_G.tuim_save_file()
 callback(target)
 assert(vim.fn.readfile(target)[1] == 'new file content')
 assert(not vim.bo[unnamed].modified)
 vim.ui.input = function() error('Named files must not prompt') end
 vim.api.nvim_buf_set_lines(unnamed, 0, -1, false, { 'updated content' })
-_G.vide_ide_action('save')
+_G.tuim_ide_action('save')
 assert(vim.fn.readfile(target)[1] == 'updated content')
 vim.fn.delete(target)
-vim.ui.input, _G.vide_native_notice = original_input, original_notice
+vim.ui.input, _G.tuim_native_notice = original_input, original_notice
 
-_G.vide_disable_ide_mode()
-assert(vim.g.vide_ide_mode == false)
+_G.tuim_disable_ide_mode()
+assert(vim.g.tuim_ide_mode == false)
 assert(vim.fn.maparg('<S-Left>', 'i') == '')
 vim.cmd('qa!')

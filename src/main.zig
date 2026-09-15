@@ -216,7 +216,7 @@ pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace, ret_
 pub fn main(init: std.process.Init) !void {
     innerMain(init) catch |err| {
         if (err == error.EndOfStream or err == error.QuitApplication) return;
-        std.debug.print("Vide could not start: {}. Verify Neovim is installed and check Vide's log.\n", .{err});
+        std.debug.print("Tuim could not start: {}. Verify Neovim is installed and check Tuim's log.\n", .{err});
         return err;
     };
 }
@@ -232,7 +232,7 @@ fn requestedVersion(init: std.process.Init) bool {
 }
 
 fn diagnosticsRequested(init: std.process.Init) bool {
-    if (init.environ_map.get("VIDE_DIAGNOSTICS")) |value| {
+    if (init.environ_map.get("TUIM_DIAGNOSTICS")) |value| {
         if (value.len > 0 and !std.mem.eql(u8, value, "0") and !std.ascii.eqlIgnoreCase(value, "false")) return true;
     }
     var args = init.minimal.args.iterate();
@@ -244,7 +244,7 @@ fn diagnosticsRequested(init: std.process.Init) bool {
 fn printVersion(init: std.process.Init) !void {
     var buffer: [128]u8 = undefined;
     var stdout = std.Io.File.stdout().writerStreaming(init.io, &buffer);
-    try stdout.interface.print("vide {s}\n", .{build_options.version});
+    try stdout.interface.print("tuim {s}\n", .{build_options.version});
     try stdout.interface.flush();
 }
 
@@ -260,7 +260,7 @@ fn innerMain(init: std.process.Init) !void {
     const fallback_data_home = try std.fs.path.join(alloc, &.{ home, ".local", "share" });
     defer alloc.free(fallback_data_home);
     const data_home = init.environ_map.get("XDG_DATA_HOME") orelse fallback_data_home;
-    const app_data_dir = try std.fs.path.join(alloc, &.{ data_home, "vide" });
+    const app_data_dir = try std.fs.path.join(alloc, &.{ data_home, "tuim" });
     defer alloc.free(app_data_dir);
     metrics.global.enabled = diagnosticsRequested(init);
     defer if (metrics.global.enabled) {
@@ -291,12 +291,12 @@ fn innerMain(init: std.process.Init) !void {
     // user's own Neovim. `--clean` also prevents sourcing their init.lua.
     var nvim_environ = try init.environ_map.clone(alloc);
     defer nvim_environ.deinit();
-    try nvim_environ.put("NVIM_APPNAME", "vide");
+    try nvim_environ.put("NVIM_APPNAME", "tuim");
 
     // Set up logging
     var data_dir = try std.Io.Dir.cwd().createDirPathOpen(init.io, app_data_dir, .{});
     data_dir.close(init.io);
-    log_path = try std.fs.path.join(alloc, &[_][]const u8{ app_data_dir, "vide.log" });
+    log_path = try std.fs.path.join(alloc, &[_][]const u8{ app_data_dir, "tuim.log" });
     defer {
         if (log_path) |p| {
             alloc.free(p);
@@ -324,9 +324,9 @@ fn innerMain(init: std.process.Init) !void {
         } else |_| {}
     }
 
-    const session_path = try std.fs.path.join(alloc, &[_][]const u8{ app_data_dir, "vide_session.vim" });
+    const session_path = try std.fs.path.join(alloc, &[_][]const u8{ app_data_dir, "tuim_session.vim" });
     defer alloc.free(session_path);
-    const handoff_path = try std.fs.path.join(alloc, &[_][]const u8{ app_data_dir, "vide_handoff_init.lua" });
+    const handoff_path = try std.fs.path.join(alloc, &[_][]const u8{ app_data_dir, "tuim_handoff_init.lua" });
     defer alloc.free(handoff_path);
 
     var term = try Terminal.init(capabilities);
@@ -399,7 +399,7 @@ fn innerMain(init: std.process.Init) !void {
             }
             if (err == error.ZenModeHandoff) {
                 term.deinit();
-                // Launch nvim with --clean + our handoff init (same plugins as vide)
+                // Launch nvim with --clean + our handoff init (same plugins as tuim)
                 // and restore the saved session
                 const cmd_arg = try std.fmt.allocPrint(alloc, "luafile {s}", .{handoff_path});
                 defer alloc.free(cmd_arg);
@@ -522,7 +522,7 @@ fn runNvimSession(
     defer debug_console.deinit();
     app.debug_console = &debug_console;
 
-    const report_endpoint = init.environ_map.get("VIDE_BUG_REPORT_ENDPOINT") orelse build_options.bug_report_endpoint;
+    const report_endpoint = init.environ_map.get("TUIM_BUG_REPORT_ENDPOINT") orelse build_options.bug_report_endpoint;
     var bug_report = try BugReportWidget.init(alloc, init.io, app_data_dir, init.environ_map.get("HOME") orelse "", report_endpoint, build_options.version, init.environ_map);
     defer bug_report.deinit();
     app.bug_report = &bug_report;
@@ -566,7 +566,7 @@ fn runNvimSession(
         app.mode = .normal;
     }
     app.prev_mode = if (app.mode == .zen) .normal else app.mode;
-    if (init.environ_map.get("VIDE_START_VIEW")) |view| {
+    if (init.environ_map.get("TUIM_START_VIEW")) |view| {
         const index: ?usize = if (std.mem.eql(u8, view, "explorer")) 0 else if (std.mem.eql(u8, view, "search")) 1 else if (std.mem.eql(u8, view, "git")) 2 else if (std.mem.eql(u8, view, "ai")) 3 else if (std.mem.eql(u8, view, "extensions")) 4 else null;
         if (index) |active| {
             app.activity_bar.active_idx = active;
@@ -633,12 +633,12 @@ fn runNvimSession(
         const r1 = try rpc_term.call("nvim_command", cp);
         msgpack.freeValue(r1, alloc);
 
-        // Vide owns the one workspace status row in every presentation mode.
+        // Tuim owns the one workspace status row in every presentation mode.
         cp[0] = .{ .string = "set laststatus=0" };
         const r_ls = try rpc.call("nvim_command", cp);
         msgpack.freeValue(r_ls, alloc);
 
-        cp[0] = .{ .string = "autocmd BufWritePost * let b:vide_session_saved = 1" };
+        cp[0] = .{ .string = "autocmd BufWritePost * let b:tuim_session_saved = 1" };
         const r_au2 = try rpc.call("nvim_command", cp);
         msgpack.freeValue(r_au2, alloc);
     }
@@ -666,7 +666,7 @@ fn runNvimSession(
     {
         std.log.info("Loading embedded editor runtime", .{});
         var params = try alloc.alloc(Value, 2);
-        params[0] = .{ .string = @embedFile("nvim/vide_init.lua") };
+        params[0] = .{ .string = @embedFile("nvim/tuim_init.lua") };
         params[1] = .{ .array = &[_]Value{} };
         if (rpc.call("nvim_exec_lua", params)) |res| {
             msgpack.freeValue(res, alloc);
@@ -752,7 +752,7 @@ fn runNvimSession(
 
         if (settings_widget.pollSoftwareUpdate()) |status| {
             switch (status) {
-                .success => app.notify(.info, "Vide was updated successfully. Restart Vide to use the new version.", .{}),
+                .success => app.notify(.info, "Tuim was updated successfully. Restart Tuim to use the new version.", .{}),
                 .failure => app.notify(.failure, "Software update failed. See {s}/software-update.log", .{app_data_dir}),
                 else => {},
             }
@@ -968,12 +968,12 @@ fn runNvimSession(
                 if (app.settings_widget.config.zen_handoff) {
                     // Write handoff init with same plugins + retoggle keybind
                     const zen_key = app.settings_widget.config.keybindings.toggle_zen;
-                    const vide_init_lua = @embedFile("nvim/vide_init.lua");
-                    const handoff_buf = try alloc.alloc(u8, vide_init_lua.len + session_path.len + 512);
+                    const tuim_init_lua = @embedFile("nvim/tuim_init.lua");
+                    const handoff_buf = try alloc.alloc(u8, tuim_init_lua.len + session_path.len + 512);
                     defer alloc.free(handoff_buf);
-                    const handoff_script = std.fmt.bufPrint(handoff_buf, "-- vide handoff\n{s}\nvim.schedule(function()\n" ++
+                    const handoff_script = std.fmt.bufPrint(handoff_buf, "-- tuim handoff\n{s}\nvim.schedule(function()\n" ++
                         "  local function back() vim.cmd('silent! wa') vim.cmd('mksession! {s}') vim.cmd('qa') end\n" ++
-                        "  vim.keymap.set({{'n','v','i','t'}}, '{s}', back, {{silent=true}})\nend)\n", .{ vide_init_lua, session_path, zen_key }) catch vide_init_lua;
+                        "  vim.keymap.set({{'n','v','i','t'}}, '{s}', back, {{silent=true}})\nend)\n", .{ tuim_init_lua, session_path, zen_key }) catch tuim_init_lua;
                     const path = handoff_path;
                     if (std.posix.openat(std.posix.AT.FDCWD, path, .{ .ACCMODE = .WRONLY, .CREAT = true, .TRUNC = true }, 0o600)) |fd| {
                         defer _ = std.posix.system.close(fd);
@@ -1011,7 +1011,7 @@ fn runNvimSession(
 
                     var cmd_p = [_]Value{.{ .string = "set laststatus=0" }};
                     _ = rpc.call("nvim_command", &cmd_p) catch {};
-                    cmd_p[0] = .{ .string = "lua vim.g.vide_zen_mode = true; vim.g.vide_ide_mode = false; _G.vide_disable_ide_mode(); if _G.vide_update_dashboard_keys then _G.vide_update_dashboard_keys() end; pcall(function() require('alpha').redraw() end)" };
+                    cmd_p[0] = .{ .string = "lua vim.g.tuim_zen_mode = true; vim.g.tuim_ide_mode = false; _G.tuim_disable_ide_mode(); if _G.tuim_update_dashboard_keys then _G.tuim_update_dashboard_keys() end; pcall(function() require('alpha').redraw() end)" };
                     _ = rpc.call("nvim_command", &cmd_p) catch {};
                 }
             }
@@ -1073,16 +1073,16 @@ fn runNvimSession(
                 var cmd_p = try alloc.alloc(Value, 1);
 
                 if (app.mode == .zen) {
-                    cmd_p[0] = .{ .string = "lua vim.g.vide_zen_mode = true; vim.g.vide_ide_mode = false; _G.vide_disable_ide_mode(); if _G.vide_update_dashboard_keys then _G.vide_update_dashboard_keys() end; pcall(function() require('alpha').redraw() end)" };
+                    cmd_p[0] = .{ .string = "lua vim.g.tuim_zen_mode = true; vim.g.tuim_ide_mode = false; _G.tuim_disable_ide_mode(); if _G.tuim_update_dashboard_keys then _G.tuim_update_dashboard_keys() end; pcall(function() require('alpha').redraw() end)" };
                 } else if (app.mode == .ide) {
-                    cmd_p[0] = .{ .string = "lua vim.g.vide_zen_mode = false; vim.g.vide_ide_mode = true; _G.vide_enable_ide_mode(); if _G.vide_update_dashboard_keys then _G.vide_update_dashboard_keys() end; pcall(function() require('alpha').redraw() end)" };
+                    cmd_p[0] = .{ .string = "lua vim.g.tuim_zen_mode = false; vim.g.tuim_ide_mode = true; _G.tuim_enable_ide_mode(); if _G.tuim_update_dashboard_keys then _G.tuim_update_dashboard_keys() end; pcall(function() require('alpha').redraw() end)" };
                 } else {
-                    cmd_p[0] = .{ .string = "lua vim.g.vide_zen_mode = false; vim.g.vide_ide_mode = false; _G.vide_disable_ide_mode(); if _G.vide_update_dashboard_keys then _G.vide_update_dashboard_keys() end; pcall(function() require('alpha').redraw() end)" };
+                    cmd_p[0] = .{ .string = "lua vim.g.tuim_zen_mode = false; vim.g.tuim_ide_mode = false; _G.tuim_disable_ide_mode(); if _G.tuim_update_dashboard_keys then _G.tuim_update_dashboard_keys() end; pcall(function() require('alpha').redraw() end)" };
                 }
                 rpc.notify("nvim_command", cmd_p) catch {};
 
                 var cmd_buf: [256]u8 = undefined;
-                if (std.fmt.bufPrint(&cmd_buf, "lua _G.vide_apply_colorcolumn('{s}')", .{app.settings_widget.config.colorcolumn})) |cmd_str| {
+                if (std.fmt.bufPrint(&cmd_buf, "lua _G.tuim_apply_colorcolumn('{s}')", .{app.settings_widget.config.colorcolumn})) |cmd_str| {
                     cmd_p[0] = .{ .string = cmd_str };
                     rpc.notify("nvim_command", cmd_p) catch {};
                 } else |_| {}
@@ -1091,7 +1091,7 @@ fn runNvimSession(
                 rpc.notify("nvim_command", cmd_p) catch {};
 
                 var theme_args = [_]Value{.{ .string = app.settings_widget.config.theme }};
-                const theme_params = [_]Value{ .{ .string = "_G.vide_apply_theme(...)" }, .{ .array = &theme_args } };
+                const theme_params = [_]Value{ .{ .string = "_G.tuim_apply_theme(...)" }, .{ .array = &theme_args } };
                 rpc.notify("nvim_exec_lua", &theme_params) catch {};
 
                 if (std.mem.eql(u8, app.settings_widget.config.line_numbers, "relative")) {
@@ -1120,12 +1120,12 @@ fn runNvimSession(
                 }
                 rpc.notify("nvim_command", cmd_p) catch {};
 
-                if (std.fmt.bufPrint(&cmd_buf, "lua vim.g.vide_autocomplete_enabled = {s}", .{if (app.settings_widget.config.autocomplete) @as([]const u8, "true") else @as([]const u8, "false")})) |cmd_str| {
+                if (std.fmt.bufPrint(&cmd_buf, "lua vim.g.tuim_autocomplete_enabled = {s}", .{if (app.settings_widget.config.autocomplete) @as([]const u8, "true") else @as([]const u8, "false")})) |cmd_str| {
                     cmd_p[0] = .{ .string = cmd_str };
                     rpc.notify("nvim_command", cmd_p) catch {};
                 } else |_| {}
 
-                if (std.fmt.bufPrint(&cmd_buf, "lua vim.g.vide_nerd_fonts = {s}", .{if (app.settings_widget.config.nerd_fonts) @as([]const u8, "true") else @as([]const u8, "false")})) |cmd_str| {
+                if (std.fmt.bufPrint(&cmd_buf, "lua vim.g.tuim_nerd_fonts = {s}", .{if (app.settings_widget.config.nerd_fonts) @as([]const u8, "true") else @as([]const u8, "false")})) |cmd_str| {
                     cmd_p[0] = .{ .string = cmd_str };
                     rpc.notify("nvim_command", cmd_p) catch {};
                 } else |_| {}

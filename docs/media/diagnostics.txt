@@ -31,6 +31,6 @@
     │                             │~
     │                             │~
     │                             │~
-  * │                             │/tmp/vide-capture.7b9mFA/diagnostics-project/demo.lua          W:1 1,1            All
+  * │                             │/tmp/tuim-capture.7b9mFA/diagnostics-project/demo.lua          W:1 1,1            All
     │                             │
   NORMAL     * main  demo.lua                                                                  Focus: Editor   [?] Help

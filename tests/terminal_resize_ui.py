@@ -9,14 +9,14 @@ import tempfile
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix='vide-resize-') as directory:
+with tempfile.TemporaryDirectory(prefix='tuim-resize-') as directory:
     base = pathlib.Path(directory)
-    env = {'VIDE_DISABLE_PLUGINS': '1', 'VIDE_SKIP_ONBOARDING': '1', 'SHELL': '/bin/sh', 'TERM': 'xterm-256color'}
+    env = {'TUIM_DISABLE_PLUGINS': '1', 'TUIM_SKIP_ONBOARDING': '1', 'SHELL': '/bin/sh', 'TERM': 'xterm-256color'}
     for name in ('config', 'data', 'state', 'cache'):
         (base / name).mkdir()
         env[f'XDG_{name.upper()}_HOME'] = str(base / name)
-    (base / 'data/vide').mkdir()
-    (base / 'data/vide/settings.json').write_text('{"mode":"normal","nerd_fonts":false}')
+    (base / 'data/tuim').mkdir()
+    (base / 'data/tuim/settings.json').write_text('{"mode":"normal","nerd_fonts":false}')
     sample = base / 'sample.txt'
     sample.write_text('editor stays visible\n')
     socket = str(base / 'tmux.sock')
@@ -36,7 +36,7 @@ with tempfile.TemporaryDirectory(prefix='vide-resize-') as directory:
             time.sleep(0.03)
         raise AssertionError(screen())
 
-    command = shlex.join(['env', *(f'{k}={v}' for k, v in env.items()), str(ROOT / 'zig-out/bin/vide'), str(sample)])
+    command = shlex.join(['env', *(f'{k}={v}' for k, v in env.items()), str(ROOT / 'zig-out/bin/tuim'), str(sample)])
     try:
         tmux('new-session', '-d', '-s', 'ui', '-x', '120', '-y', '36', '-c', str(base), command)
         wait_for(lambda s: 'editor stays visible' in s)
@@ -44,18 +44,18 @@ with tempfile.TemporaryDirectory(prefix='vide-resize-') as directory:
         wait_for(lambda s: 'Debug console' in s)
         # Spaces can move Neovim's terminal cursor without a grid-line update.
         # Each old software cursor must be erased even in these cursor-only frames.
-        tmux('send-keys', '-l', '-t', 'ui', "PS1='VIDE> '")
+        tmux('send-keys', '-l', '-t', 'ui', "PS1='TUIM> '")
         time.sleep(0.15)
         tmux('send-keys', '-t', 'ui', 'Enter')
-        wait_for(lambda s: any(line.split('│')[-1].lstrip().startswith('VIDE>') for line in s.splitlines()))
+        wait_for(lambda s: any(line.split('│')[-1].lstrip().startswith('TUIM>') for line in s.splitlines()))
         tmux('send-keys', '-l', '-t', 'ui', 'echo')
         time.sleep(0.15)
         for _ in range(4):
             tmux('send-keys', '-l', '-t', 'ui', ' ')
             time.sleep(0.12)
-        grid = wait_for(lambda s: 'VIDE> echo' in s)
-        row, line = next((i, line) for i, line in enumerate(grid.splitlines()) if 'VIDE> echo' in line)
-        command_x = line.index('VIDE> echo') + len('VIDE> ')
+        grid = wait_for(lambda s: 'TUIM> echo' in s)
+        row, line = next((i, line) for i, line in enumerate(grid.splitlines()) if 'TUIM> echo' in line)
+        command_x = line.index('TUIM> echo') + len('TUIM> ')
         ansi = tmux('capture-pane', '-p', '-e', '-t', 'ui').splitlines()[row]
         backgrounds = []
         background = None
@@ -85,7 +85,7 @@ with tempfile.TemporaryDirectory(prefix='vide-resize-') as directory:
 
         for width, height in ((90, 28), (150, 45), (45, 16), (120, 36)):
             tmux('resize-window', '-t', 'ui', '-x', str(width), '-y', str(height))
-            # No keypress wakes Vide: the footer must move by itself.
+            # No keypress wakes Tuim: the footer must move by itself.
             grid = wait_for(lambda s: len(s.splitlines()) == height and 'Zen' in s.splitlines()[-1])
             wait_for(lambda s: '[Debug console]' in s or '[Debug]' in s)
             time.sleep(0.15)
@@ -100,7 +100,7 @@ with tempfile.TemporaryDirectory(prefix='vide-resize-') as directory:
             assert (rows, cols) == (height - header_y - 2, width - panel_x), ((rows, cols), grid)
             terminal_lines = grid.splitlines()[header_y + 1:-1]
             assert not any(line.rstrip().endswith('All') for line in terminal_lines), grid
-        pathlib.Path('/tmp/vide-terminal-redesign.txt').write_text(screen())
+        pathlib.Path('/tmp/tuim-terminal-redesign.txt').write_text(screen())
         tmux('send-keys', '-t', 'ui', 'C-q')
     finally:
         subprocess.run(['tmux', '-S', socket, 'kill-server'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

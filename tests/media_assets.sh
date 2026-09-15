@@ -17,7 +17,7 @@ done
 grep -Fq 'NORMAL' docs/media/normal.txt
 grep -Fq 'IDE' docs/media/ide.txt
 grep -Fq 'ZEN' docs/media/zen.txt
-grep -Fq 'Vide Settings' docs/media/settings.txt
+grep -Fq 'Tuim Settings' docs/media/settings.txt
 grep -Fq 'SOURCE CONTROL' docs/media/git.txt
 grep -Fq 'TERMINAL' docs/media/terminal.txt
 grep -Fq 'EXTENSION SHOP' docs/media/extensions.txt

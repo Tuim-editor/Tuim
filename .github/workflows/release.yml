@@ -32,7 +32,7 @@ jobs:
           version: 0.16.0
       - name: Build native release binaries
         env:
-          VIDE_BUG_REPORT_ENDPOINT: ${{ vars.VIDE_BUG_REPORT_ENDPOINT }}
+          TUIM_BUG_REPORT_ENDPOINT: ${{ vars.TUIM_BUG_REPORT_ENDPOINT }}
           NEOVIM_VERSION: v0.12.4
         run: |
           mkdir -p dist
@@ -47,31 +47,31 @@ jobs:
             ZIG_LOCAL_CACHE_DIR=$PWD/.zig-cache/local \
               zig build -Dtarget="$target" -Doptimize=ReleaseFast \
                 -Dversion="${GITHUB_REF_NAME#v}" \
-                -Dbug-report-endpoint="$VIDE_BUG_REPORT_ENDPOINT" --prefix "$prefix"
+                -Dbug-report-endpoint="$TUIM_BUG_REPORT_ENDPOINT" --prefix "$prefix"
             archive="$RUNNER_TEMP/$nvim_asset.tar.gz"
             curl -fL --retry 3 -o "$archive" \
               "https://github.com/neovim/neovim/releases/download/$NEOVIM_VERSION/$nvim_asset.tar.gz"
             tar -xzf "$archive" -C "$RUNNER_TEMP"
-            mkdir -p "$bundle/bin" "$bundle/lib/vide"
-            cp packaging/vide-launcher "$bundle/bin/vide"
-            chmod 755 "$bundle/bin/vide"
-            cp "$prefix/bin/vide" "$bundle/lib/vide/vide"
-            cp src/nvim/vide_init.lua "$bundle/lib/vide/vide_init.lua"
-            mv "$RUNNER_TEMP/$nvim_asset" "$bundle/lib/vide/nvim"
+            mkdir -p "$bundle/bin" "$bundle/lib/tuim"
+            cp packaging/tuim-launcher "$bundle/bin/tuim"
+            chmod 755 "$bundle/bin/tuim"
+            cp "$prefix/bin/tuim" "$bundle/lib/tuim/tuim"
+            cp src/nvim/tuim_init.lua "$bundle/lib/tuim/tuim_init.lua"
+            mv "$RUNNER_TEMP/$nvim_asset" "$bundle/lib/tuim/nvim"
             tar -C "$RUNNER_TEMP/$asset-bundle" -czf "dist/$asset.tar.gz" "$asset"
           }
-          build_asset x86_64-linux-musl vide-linux-x86_64 nvim-linux-x86_64
-          build_asset aarch64-linux-musl vide-linux-aarch64 nvim-linux-arm64
-          build_asset x86_64-macos vide-macos-x86_64 nvim-macos-x86_64
-          build_asset aarch64-macos vide-macos-aarch64 nvim-macos-arm64
+          build_asset x86_64-linux-musl tuim-linux-x86_64 nvim-linux-x86_64
+          build_asset aarch64-linux-musl tuim-linux-aarch64 nvim-linux-arm64
+          build_asset x86_64-macos tuim-macos-x86_64 nvim-macos-x86_64
+          build_asset aarch64-macos tuim-macos-aarch64 nvim-macos-arm64
       - name: Build AppImage
         env:
-          VIDE_BUG_REPORT_ENDPOINT: ${{ vars.VIDE_BUG_REPORT_ENDPOINT }}
+          TUIM_BUG_REPORT_ENDPOINT: ${{ vars.TUIM_BUG_REPORT_ENDPOINT }}
         run: |
           VERSION="${GITHUB_REF_NAME#v}" COMMIT_SHA="$GITHUB_SHA" bash build_appimage.sh
-          tests/appimage_smoke.sh Vide.AppDir
-          if appimage=$(find . -maxdepth 1 -type f -name 'Vide-*-x86_64.AppImage' -print -quit) && [ -n "$appimage" ]; then
-            cp "$appimage" dist/Vide-linux-x86_64.AppImage
+          tests/appimage_smoke.sh Tuim.AppDir
+          if appimage=$(find . -maxdepth 1 -type f -name 'Tuim-*-x86_64.AppImage' -print -quit) && [ -n "$appimage" ]; then
+            cp "$appimage" dist/Tuim-linux-x86_64.AppImage
             mv "$appimage" "$appimage.sha256" dist/
           fi
       - name: Generate checksums
@@ -83,6 +83,6 @@ jobs:
         with:
           files: |
             dist/*
-          name: Vide ${{ github.ref_name }}
+          name: Tuim ${{ github.ref_name }}
           body_path: docs/releases/${{ github.ref_name }}.md
           generate_release_notes: true

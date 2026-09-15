@@ -12,11 +12,11 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 def run(capture=None):
-    with tempfile.TemporaryDirectory(prefix="vide-system-ui-") as directory:
+    with tempfile.TemporaryDirectory(prefix="tuim-system-ui-") as directory:
         base = pathlib.Path(directory)
-        for name in ("config", "data/vide", "state", "cache"):
+        for name in ("config", "data/tuim", "state", "cache"):
             (base / name).mkdir(parents=True, exist_ok=True)
-        (base / "data/vide/settings.json").write_text('{"mode":"normal","nerd_fonts":false}')
+        (base / "data/tuim/settings.json").write_text('{"mode":"normal","nerd_fonts":false}')
         sample = base / "sample.zig"
         sample.write_text('const answer: u32 = 42;\n')
         socket = str(base / "tmux.sock")
@@ -57,11 +57,11 @@ def run(capture=None):
             "XDG_DATA_HOME": str(base / "data"),
             "XDG_STATE_HOME": str(base / "state"),
             "XDG_CACHE_HOME": str(base / "cache"),
-            "VIDE_DISABLE_PLUGINS": "1",
-            "VIDE_SKIP_ONBOARDING": "1",
+            "TUIM_DISABLE_PLUGINS": "1",
+            "TUIM_SKIP_ONBOARDING": "1",
             "TERM": "xterm-256color",
         }
-        command = shlex.join(["env", *(f"{k}={v}" for k, v in env.items()), str(ROOT / "zig-out/bin/vide"), str(sample)])
+        command = shlex.join(["env", *(f"{k}={v}" for k, v in env.items()), str(ROOT / "zig-out/bin/tuim"), str(sample)])
         theme_dir = base / "state/omarchy/current/theme"
         theme_dir.mkdir(parents=True)
         colors = theme_dir / "colors.toml"
@@ -88,7 +88,7 @@ def run(capture=None):
             column = line.index("System (follow desktop)") + len("System (follow desktop)") - 1
             text(f"\x1b[<0;{column + 1};{row + 1}M\x1b[<0;{column + 1};{row + 1}m")
             send("C-s")
-            wait_for(lambda _: json.loads((base / "data/vide/settings.json").read_text()).get("theme") == "system", "System selection was not saved")
+            wait_for(lambda _: json.loads((base / "data/tuim/settings.json").read_text()).get("theme") == "system", "System selection was not saved")
             wait_for(lambda _: "48;2;5;24;46m" in ansi(), "Editor did not use system background")
             assert "48;2;3;18;34m" not in ansi(), "Sidebar did not blend into the editor background"
             save_capture("system-dark")

@@ -215,7 +215,7 @@ pub const AiPanel = struct {
         if (!self.choosing and self.itemCount() == 2 and rect.h >= after_items + 7) {
             const y = rect.y + @as(u16, @intCast(after_items + 1));
             const guidance = if (!self.available[self.chosen])
-                [_][]const u8{ "Install a CLI first", "then restart Vide", "to detect it." }
+                [_][]const u8{ "Install a CLI first", "then restart Tuim", "to detect it." }
             else
                 [_][]const u8{ if (self.sessions[self.chosen] == .stopped) "1. Restart & type" else "1. Open chat & type", "2. Add file or code", "   with Send actions" };
             for (guidance, 0..) |line, offset| ren.drawTextClipped(rect.x + 2, y + @as(u16, @intCast(offset)), rect.w - 4, line, colors.fg_secondary, colors.bg_sidebar, false, false);

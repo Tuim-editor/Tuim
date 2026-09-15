@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Capture real Vide terminal grids as WebP images (no fabricated UI).
+"""Capture real Tuim terminal grids as WebP images (no fabricated UI).
 
 Run after zig build:
   uv run --with pillow --with pyte python scripts/capture_screenshots.py
@@ -56,21 +56,21 @@ def render(ansi, target):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--data-dir', type=Path, default=Path(os.environ.get('XDG_DATA_HOME', Path.home() / '.local/share')) / 'vide', help='Vide data directory populated by setup.sh')
+    parser.add_argument('--data-dir', type=Path, default=Path(os.environ.get('XDG_DATA_HOME', Path.home() / '.local/share')) / 'tuim', help='Tuim data directory populated by setup.sh')
     args = parser.parse_args()
     for name in ('lazy', 'site'):
         if not (args.data_dir / name).is_dir():
             parser.error('Run setup.sh first: missing ' + str(args.data_dir / name))
     OUTPUT.mkdir(exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix='vide-screenshots-') as temp:
+    with tempfile.TemporaryDirectory(prefix='tuim-screenshots-') as temp:
         base = Path(temp)
-        project = base / 'vide'
+        project = base / 'tuim'
         (project / 'src').mkdir(parents=True)
         for name in ('build.zig', 'build.zig.zon', 'README.md', 'LICENSE', 'src/main.zig'):
             shutil.copyfile(ROOT / name, project / name)
         subprocess.run(['git', 'init', '-q', '-b', 'main', str(project)], check=True)
         subprocess.run(['git', '-C', str(project), 'add', '.'], check=True)
-        subprocess.run(['git', '-C', str(project), '-c', 'user.name=Vide demo', '-c', 'user.email=demo@example.com', 'commit', '-qm', 'Add Vide project files'], check=True)
+        subprocess.run(['git', '-C', str(project), '-c', 'user.name=Tuim demo', '-c', 'user.email=demo@example.com', 'commit', '-qm', 'Add Tuim project files'], check=True)
         with (project / 'build.zig').open('a') as file:
             file.write('\n// Build locally with zig build.\n')
         socket = str(base / 'tmux.sock')
@@ -101,16 +101,16 @@ def main():
             print(f'Captured {name}', flush=True)
 
         def start(mode):
-            data = base / mode / 'data/vide'
+            data = base / mode / 'data/tuim'
             data.mkdir(parents=True)
             (data / 'settings.json').write_text(json.dumps({'mode': mode, 'nerd_fonts': False, 'theme': 'vscode'}))
             for name in ('lazy', 'site'):
                 shutil.copytree(args.data_dir / name, data / name)
             env = dict(HOME=str(base / mode), XDG_CONFIG_HOME=str(base / mode / 'config'),
                        XDG_DATA_HOME=str(base / mode / 'data'), XDG_CACHE_HOME=str(base / mode / 'cache'),
-                       XDG_STATE_HOME=str(base / mode / 'state'), VIDE_DISABLE_PLUGINS='0',
-                       VIDE_SKIP_ONBOARDING='1', TERM='xterm-256color', COLORTERM='truecolor')
-            command = shlex.join(['env', *(f'{key}={value}' for key, value in env.items()), str(ROOT / 'zig-out/bin/vide'), 'build.zig'])
+                       XDG_STATE_HOME=str(base / mode / 'state'), TUIM_DISABLE_PLUGINS='0',
+                       TUIM_SKIP_ONBOARDING='1', TERM='xterm-256color', COLORTERM='truecolor')
+            command = shlex.join(['env', *(f'{key}={value}' for key, value in env.items()), str(ROOT / 'zig-out/bin/tuim'), 'build.zig'])
             tmux('-f', '/dev/null', 'new-session', '-d', '-s', 'capture', '-x', str(COLS), '-y', str(ROWS), '-c', str(project), command)
             wait_for('build.zig')
             time.sleep(6)
@@ -126,14 +126,14 @@ def main():
             capture('normal')
             send('C-t')
             wait_for('Terminal')
-            tmux('send-keys', '-l', '-t', 'capture', "export PS1='vide $ '; clear")
+            tmux('send-keys', '-l', '-t', 'capture', "export PS1='tuim $ '; clear")
             send('Enter')
-            wait_for('vide $')
+            wait_for('tuim $')
             capture('terminal')
             send('C-t', 'F1')
             tmux('send-keys', '-l', '-t', 'capture', 'Settings')
             send('Enter')
-            wait_for('Vide Settings')
+            wait_for('Tuim Settings')
             send('Down')
             wait_for('VS Code Dark Modern')
             capture('settings')

@@ -466,7 +466,7 @@ pub const LazyWidget = struct {
             _ = rpc.call("nvim_command", &[_]Value{.{ .string = "Lazy update" }}) catch null;
             return true;
         } else if (std.mem.eql(u8, key, "s")) {
-            rpc.notify("nvim_command", &[_]Value{.{ .string = "lua vim.schedule(function() if vim.g.vide_plugins_disabled then _G.vide_retry_plugins() else _G.vide_native_notice('info', 'Synchronizing plugins...'); vim.cmd('Lazy sync') end end)" }}) catch {};
+            rpc.notify("nvim_command", &[_]Value{.{ .string = "lua vim.schedule(function() if vim.g.tuim_plugins_disabled then _G.tuim_retry_plugins() else _G.tuim_native_notice('info', 'Synchronizing plugins...'); vim.cmd('Lazy sync') end end)" }}) catch {};
             return true;
         } else if (std.mem.eql(u8, key, "x")) {
             _ = rpc.call("nvim_command", &[_]Value{.{ .string = "Lazy clean" }}) catch null;

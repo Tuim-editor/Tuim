@@ -107,7 +107,7 @@ pub const Explorer = struct {
             \\            table.insert(res.modified, rel_name)
             \\        else
             \\            local is_saved = false
-            \\            pcall(function() is_saved = vim.b[buf].vide_session_saved end)
+            \\            pcall(function() is_saved = vim.b[buf].tuim_session_saved end)
             \\            if is_saved then
             \\                table.insert(res.saved, rel_name)
             \\            end

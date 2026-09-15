@@ -6,7 +6,7 @@ on:
     paths:
       - index.html
       - assets/site.css
-      - packaging/vide.svg
+      - packaging/tuim.svg
       - docs/**
       - README.md
       - .github/workflows/pages.yml
@@ -35,7 +35,7 @@ jobs:
           mkdir -p _site/assets _site/packaging _site/docs
           cp index.html _site/
           cp assets/site.css _site/assets/
-          cp packaging/vide.svg _site/packaging/
+          cp packaging/tuim.svg _site/packaging/
           cp README.md _site/
           cp -R docs/. _site/docs/
       - uses: actions/upload-pages-artifact@v3

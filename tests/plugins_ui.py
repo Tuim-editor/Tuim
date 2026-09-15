@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise installed-plugin controls through Vide's real terminal UI."""
+"""Exercise installed-plugin controls through Tuim's real terminal UI."""
 import json
 import pathlib
 import shlex
@@ -11,9 +11,9 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 def run():
-    with tempfile.TemporaryDirectory(prefix="vide-plugin-ui-") as directory:
+    with tempfile.TemporaryDirectory(prefix="tuim-plugin-ui-") as directory:
         base = pathlib.Path(directory)
-        data = base / "data/vide"
+        data = base / "data/tuim"
         (data / "lazy/alpha-demo").mkdir(parents=True)
         (data / "settings.json").write_text('{"mode":"normal","nerd_fonts":false}')
         (data / "store_db.json").write_text(json.dumps({"items": [
@@ -64,8 +64,8 @@ def run():
 
         env = {"XDG_DATA_HOME": str(base / "data"), "XDG_CONFIG_HOME": str(base / "config"),
                "XDG_STATE_HOME": str(base / "state"), "XDG_CACHE_HOME": str(base / "cache"),
-               "VIDE_DISABLE_PLUGINS": "1", "VIDE_SKIP_ONBOARDING": "1", "TERM": "xterm-256color"}
-        launch = shlex.join(["env", *(f"{k}={v}" for k, v in env.items()), str(ROOT / "zig-out/bin/vide"), str(base / "sample.txt")])
+               "TUIM_DISABLE_PLUGINS": "1", "TUIM_SKIP_ONBOARDING": "1", "TERM": "xterm-256color"}
+        launch = shlex.join(["env", *(f"{k}={v}" for k, v in env.items()), str(ROOT / "zig-out/bin/tuim"), str(base / "sample.txt")])
         try:
             tmux("new-session", "-d", "-s", "ui", "-x", "110", "-y", "36", "-c", str(base), launch)
             tmux("set-option", "-t", "ui", "remain-on-exit", "on")
@@ -83,24 +83,24 @@ def run():
             command("extensions")
             send("Enter")
             send("d")
-            prompt = wait("Restart Vide?")
+            prompt = wait("Restart Tuim?")
             assert "Plugin changes saved." in prompt
             assert "[Y] Restart" in prompt and "[N] Later" in prompt
             prompt_rows = prompt.splitlines()
-            assert next(i for i, row in enumerate(prompt_rows) if "Restart Vide?" in row) < len(prompt_rows) - 4
+            assert next(i for i, row in enumerate(prompt_rows) if "Restart Tuim?" in row) < len(prompt_rows) - 4
             assert states()["example/alpha-demo"] == "disabled"
             tmux("resize-window", "-t", "ui", "-x", "60", "-y", "20")
             time.sleep(.3)
-            prompt = wait("Restart Vide?")
+            prompt = wait("Restart Tuim?")
             assert "[Y] Restart" in prompt and "[N] Later" in prompt
-            assert prompt.count("Restart Vide?") == 1, prompt
-            pathlib.Path("/tmp/vide-plugin-confirmation.txt").write_text(prompt)
+            assert prompt.count("Restart Tuim?") == 1, prompt
+            pathlib.Path("/tmp/tuim-plugin-confirmation.txt").write_text(prompt)
             click("[N] Later")
             wait("Disabled")
             tmux("resize-window", "-t", "ui", "-x", "110", "-y", "36")
             send("Enter")
             click("D  Enable plugin")
-            wait("Restart Vide?")
+            wait("Restart Tuim?")
             assert states()["example/alpha-demo"] == "enabled"
             send("Escape")
             send("Enter")
@@ -113,7 +113,7 @@ def run():
             time.sleep(.3)
             prompt = wait("Uninstall?")
             assert "[Y] Remove" in prompt and "[N] Cancel" in prompt, prompt
-            pathlib.Path("/tmp/vide-plugin-uninstall.txt").write_text(prompt)
+            pathlib.Path("/tmp/tuim-plugin-uninstall.txt").write_text(prompt)
             tmux("resize-window", "-t", "ui", "-x", "40", "-y", "20")
             time.sleep(.3)
             wait("Enlarge to confirm")
@@ -133,14 +133,14 @@ def run():
             send("u")
             wait("Uninstall?")
             click("[Y] Remove")
-            wait("Restart Vide?")
+            wait("Restart Tuim?")
             assert states()["example/alpha-demo"] == "removed"
             assert config.read_text() == original
             send("Escape")
             wait("Removal pending restart")
             wait("Enter  Install plugin")
             send("Enter")
-            wait("Restart Vide?")
+            wait("Restart Tuim?")
             assert states()["example/alpha-demo"] == "enabled"
             send("Escape")
             send("Escape")

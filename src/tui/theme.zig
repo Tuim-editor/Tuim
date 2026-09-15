@@ -57,7 +57,7 @@ pub const Theme = struct {
         }
 
         // Theme highlight groups are not guaranteed to be readable against
-        // the sidebar used by settings and other native Vide panels. Keep the
+        // the sidebar used by settings and other native Tuim panels. Keep the
         // supplied palette when it is accessible, otherwise move foregrounds
         // toward the higher-contrast endpoint.
         self.fg_primary = readableForeground(self.fg_primary, self.bg_sidebar, 7.0);

@@ -197,7 +197,7 @@ pub const MasonWidget = struct {
             \\if not pcall(require, 'mason-registry') then return 'Language tools unavailable. Enable Mason in Settings > Plugins.' end
             \\local active = {}
             \\for _, client in ipairs(vim.lsp.get_clients()) do table.insert(active, client.name) end
-            \\local recommended = vim.g.vide_recommended_servers or {}
+            \\local recommended = vim.g.tuim_recommended_servers or {}
             \\local commands = { zls='zls', lua_ls='lua-language-server', pyright='pyright-langserver', rust_analyzer='rust-analyzer', ts_ls='typescript-language-server', gopls='gopls', clangd='clangd' }
             \\local missing = {}
             \\for _, server in ipairs(recommended) do local cmd=commands[server]; if cmd and vim.fn.executable(cmd)==0 then table.insert(missing, cmd) end end

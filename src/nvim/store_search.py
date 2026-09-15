@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Vide marketplace and offline installed-plugin inventory."""
+"""Tuim marketplace and offline installed-plugin inventory."""
 import json
 import os
 import pathlib
@@ -9,11 +9,11 @@ import tempfile
 import time
 import urllib.request
 
-VIDE_DIR = pathlib.Path(os.environ.get("XDG_DATA_HOME", pathlib.Path.home() / ".local/share")) / "vide"
-DB_PATH = VIDE_DIR / "store_db.json"
-USER_PLUGINS_PATH = VIDE_DIR / "user_plugins.json"
-STATE_PATH = VIDE_DIR / "plugin_states.json"
-INVENTORY_PATH = VIDE_DIR / "plugin_inventory.json"
+TUIM_DIR = pathlib.Path(os.environ.get("XDG_DATA_HOME", pathlib.Path.home() / ".local/share")) / "tuim"
+DB_PATH = TUIM_DIR / "store_db.json"
+USER_PLUGINS_PATH = TUIM_DIR / "user_plugins.json"
+STATE_PATH = TUIM_DIR / "plugin_states.json"
+INVENTORY_PATH = TUIM_DIR / "plugin_inventory.json"
 
 
 def read_json(path, default):
@@ -42,7 +42,7 @@ def write_json(path, value):
 def download_db():
     url = "https://github.com/alex-popov-tech/store.nvim.crawler/releases/latest/download/db_minified.json"
     try:
-        request = urllib.request.Request(url, headers={"User-Agent": "Vide"})
+        request = urllib.request.Request(url, headers={"User-Agent": "Tuim"})
         with urllib.request.urlopen(request, timeout=10) as response:
             data = json.load(response)
         if not isinstance(data, dict) or not isinstance(data.get("items"), list):
@@ -60,7 +60,7 @@ def inventory():
     for repo in read_json(USER_PLUGINS_PATH, []):
         entries.setdefault(repo, {"name": repo.rsplit("/", 1)[-1], "full_name": repo, "source": "Marketplace"})
     known_names = {p["name"] for p in entries.values()}
-    root = VIDE_DIR / "lazy"
+    root = TUIM_DIR / "lazy"
     if root.is_dir():
         for path in sorted(root.iterdir()):
             if path.is_dir() and path.name not in known_names and not path.name.startswith("."):
@@ -120,7 +120,7 @@ def change_plugin(action, repo):
     if not re.fullmatch(r"[\w.-]+/[\w.-]+", repo) or any(part in (".", "..") for part in repo.split("/")):
         raise ValueError("Only repository plugins can be managed here")
     if repo == "folke/lazy.nvim":
-        raise ValueError("Vide needs its plugin manager")
+        raise ValueError("Tuim needs its plugin manager")
     entries = inventory()
     entry = entries.get(repo)
     if action != "add" and (not entry or not entry["installed"]):
@@ -140,7 +140,7 @@ def change_plugin(action, repo):
     states = read_json(STATE_PATH, {})
     states[repo] = {"add": "enabled", "enable": "enabled", "disable": "disabled", "remove": "removed"}[action]
     write_json(STATE_PATH, states)
-    return {"success": True, "message": "Saved. Restart Vide to apply; plugin configuration is kept."}
+    return {"success": True, "message": "Saved. Restart Tuim to apply; plugin configuration is kept."}
 
 
 def main():

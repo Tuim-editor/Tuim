@@ -396,10 +396,10 @@ pub const BugReportWidget = struct {
 
     fn drawConsent(self: *const BugReportWidget, ren: *renderer.Renderer, r: Rect, theme: anytype) void {
         ren.drawText(r.x + 3, r.y + 4, "Include debug logs?", theme.fg_primary, theme.bg_sidebar, true, false);
-        ren.drawText(r.x + 3, r.y + 6, "VIDE can attach up to the last 32 KB of vide.log.", theme.fg_secondary, theme.bg_sidebar, false, false);
+        ren.drawText(r.x + 3, r.y + 6, "TUIM can attach up to the last 32 KB of tuim.log.", theme.fg_secondary, theme.bg_sidebar, false, false);
         ren.drawText(r.x + 3, r.y + 7, "Likely tokens, passwords, and your home path are redacted.", theme.fg_secondary, theme.bg_sidebar, false, false);
         ren.drawText(r.x + 3, r.y + 9, "The report is sent only after you choose below.", theme.fg_secondary, theme.bg_sidebar, false, false);
-        ren.drawText(r.x + 3, r.y + 10, "VIDE and basic system environment are included either way.", theme.fg_secondary, theme.bg_sidebar, false, false);
+        ren.drawText(r.x + 3, r.y + 10, "TUIM and basic system environment are included either way.", theme.fg_secondary, theme.bg_sidebar, false, false);
         const p = palette(theme);
         (primitives.Button{ .rect = .{ .x = r.x + 3, .y = r.y + r.h - 4, .w = 20, .h = 1 }, .state = if (self.consent_yes) .focused else .normal }).draw(ren, "Include logs", p);
         (primitives.Button{ .rect = .{ .x = r.x + 26, .y = r.y + r.h - 4, .w = 22, .h = 1 }, .state = if (!self.consent_yes) .focused else .normal }).draw(ren, "Send without logs", p);
@@ -618,7 +618,7 @@ pub const BugReportWidget = struct {
     }
 
     fn readLogs(self: *BugReportWidget) ![]u8 {
-        const log_file_path = try std.fs.path.join(self.allocator, &.{ self.data_dir, "vide.log" });
+        const log_file_path = try std.fs.path.join(self.allocator, &.{ self.data_dir, "tuim.log" });
         defer self.allocator.free(log_file_path);
         const path_z = try self.allocator.dupeSentinel(u8, log_file_path, 0);
         defer self.allocator.free(path_z);
@@ -666,7 +666,7 @@ pub const BugReportWidget = struct {
         try jsonEscape(&json, self.summary.items);
         try json.appendSlice("\",\"description\":\"");
         try jsonEscape(&json, self.description.items);
-        try json.appendSlice("\",\"metadata\":{\"videVersion\":\"");
+        try json.appendSlice("\",\"metadata\":{\"tuimVersion\":\"");
         try jsonEscape(&json, self.version);
         try json.appendSlice("\",\"os\":\"");
         try jsonEscape(&json, @tagName(builtin.os.tag));
@@ -712,7 +712,7 @@ pub const BugReportWidget = struct {
         }
 
         const command = "curl -sS --max-time 20 -H 'Content-Type: application/json' --data-binary @\"$2\" -o \"$3\" -w '%{http_code}' \"$1\" >\"$4\" 2>/dev/null &";
-        const argv = &[_][]const u8{ "sh", "-c", command, "vide-bug-report", self.endpoint, payload_path, response_path, status_path };
+        const argv = &[_][]const u8{ "sh", "-c", command, "tuim-bug-report", self.endpoint, payload_path, response_path, status_path };
         var child = try std.process.spawn(self.io, .{ .argv = argv, .stdin = .ignore, .stdout = .ignore, .stderr = .ignore });
         const term = try child.wait(self.io);
         if (term != .exited or term.exited != 0) return error.ReportLaunchFailed;

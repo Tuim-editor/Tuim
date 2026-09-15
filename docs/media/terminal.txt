@@ -1,6 +1,6 @@
     │ EXPLORER             +F +D  │  [No Name]    x  +                                                        |     -
 ▋ E │ > cache                     │                         Warning: Plugins are disabled for this recovery session.
-    │ > config                    │                         VIDE
+    │ > config                    │                         TUIM
     │ > data                      │
   S │ > state                     │              Terminal-native editor and IDE
     │                             │

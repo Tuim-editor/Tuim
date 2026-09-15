@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="Rouboufy/vide"
+REPO="Rouboufy/tuim"
 ZIG_VERSION="0.16.0"
 NEOVIM_VERSION="0.12.4"
 TREESITTER_VERSION="0.26.1"
@@ -38,7 +38,7 @@ run() {
 }
 report_update_progress() {
     $DRY_RUN && return 0
-    local progress_file="${VIDE_UPDATE_PROGRESS_FILE:-}"
+    local progress_file="${TUIM_UPDATE_PROGRESS_FILE:-}"
     [ -n "$progress_file" ] || return 0
     printf '%s\n' "$1" >"${progress_file}.tmp.$$"
     mv -f "${progress_file}.tmp.$$" "$progress_file"
@@ -57,8 +57,8 @@ with open(sys.argv[1], 'rb') as file:
     print(hashlib.file_digest(file, 'sha256').hexdigest() if hasattr(hashlib, 'file_digest') else hashlib.sha256(file.read()).hexdigest())
 PY
 }
-OS_NAME="${VIDE_TEST_PLATFORM:-$(uname -s)}"
-ARCH="${VIDE_TEST_ARCH:-$(uname -m)}"
+OS_NAME="${TUIM_TEST_PLATFORM:-$(uname -s)}"
+ARCH="${TUIM_TEST_ARCH:-$(uname -m)}"
 case "$ARCH" in amd64) ARCH=x86_64 ;; arm64) ARCH=aarch64 ;; esac
 case "$OS_NAME/$ARCH" in
     Linux/x86_64) PLATFORM=linux; TS_ARCH=x64; NVIM_ARCH=x86_64 ;;
@@ -74,13 +74,13 @@ case "$OS_NAME/$ARCH" in
         fi ;;
 
 esac
-RELEASE_ASSET="vide-$PLATFORM-$ARCH.tar.gz"
-if [ "${VIDE_TEST_ONLY:-}" = release ]; then printf '%s\n' "$RELEASE_ASSET"; exit 0; fi
+RELEASE_ASSET="tuim-$PLATFORM-$ARCH.tar.gz"
+if [ "${TUIM_TEST_ONLY:-}" = release ]; then printf '%s\n' "$RELEASE_ASSET"; exit 0; fi
 
-CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/vide"
-DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/vide"
-STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/vide"
-CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/vide"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/tuim"
+DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/tuim"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/tuim"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/tuim"
 BIN_DIR="$HOME/.local/bin"
 TOOLS_DIR="$DATA_DIR/tools"
 export PATH="$TOOLS_DIR/bin:$PATH"
@@ -90,7 +90,7 @@ if [ "$OS_NAME" = Darwin ]; then
     done
 fi
 IS_WSL=false
-if [ "${VIDE_TEST_WSL:-0}" = 1 ] || { [ "$OS_NAME" = Linux ] && grep -qi microsoft /proc/version 2>/dev/null; }; then IS_WSL=true; fi
+if [ "${TUIM_TEST_WSL:-0}" = 1 ] || { [ "$OS_NAME" = Linux ] && grep -qi microsoft /proc/version 2>/dev/null; }; then IS_WSL=true; fi
 
 MISSING=()
 probe_dependencies() {
@@ -112,10 +112,10 @@ probe_dependencies() {
     fi
 }
 probe_dependencies
-if [ "${VIDE_TEST_MISSING+x}" ]; then read -r -a MISSING <<<"$VIDE_TEST_MISSING" || true; fi
+if [ "${TUIM_TEST_MISSING+x}" ]; then read -r -a MISSING <<<"$TUIM_TEST_MISSING" || true; fi
 
 install_dependencies() {
-    local manager="${VIDE_TEST_PACKAGE_MANAGER:-}" dependency
+    local manager="${TUIM_TEST_PACKAGE_MANAGER:-}" dependency
     local packages=() privilege=()
     if [ -z "$manager" ]; then
         if [ "$OS_NAME" = Darwin ]; then manager=brew
@@ -173,14 +173,14 @@ if [ ${#MISSING[@]} -gt 0 ]; then
         [ ${#MISSING[@]} -eq 0 ] || { echo "Dependencies still unavailable: ${MISSING[*]}" >&2; exit 1; }
     fi
 fi
-if [ "${VIDE_TEST_ONLY:-}" = 1 ]; then
+if [ "${TUIM_TEST_ONLY:-}" = 1 ]; then
     $IS_WSL && echo "WSL path detected"
     exit 0
 fi
 
 run mkdir -p "$CONFIG_DIR" "$DATA_DIR" "$STATE_DIR" "$CACHE_DIR" "$BIN_DIR" "$TOOLS_DIR/bin"
-if $DRY_RUN; then DOWNLOAD_DIR="${TMPDIR:-/tmp}/vide-install.dry-run"
-else DOWNLOAD_DIR=$(mktemp -d "${TMPDIR:-/tmp}/vide-install.XXXXXX"); trap 'rm -rf "$DOWNLOAD_DIR"' EXIT; fi
+if $DRY_RUN; then DOWNLOAD_DIR="${TMPDIR:-/tmp}/tuim-install.dry-run"
+else DOWNLOAD_DIR=$(mktemp -d "${TMPDIR:-/tmp}/tuim-install.XXXXXX"); trap 'rm -rf "$DOWNLOAD_DIR"' EXIT; fi
 
 # GitHub's asset digest verifies private tool downloads without trusting a
 # distro package to provide a sufficiently recent parser generator or Neovim.
@@ -259,7 +259,7 @@ PY
     fi
     report_update_progress 30
     run zig build --build-file "$SOURCE_DIR/build.zig" -Doptimize=ReleaseFast --prefix "$SOURCE_DIR/zig-out"
-    INIT_PATH="$SOURCE_DIR/src/nvim/vide_init.lua"
+    INIT_PATH="$SOURCE_DIR/src/nvim/tuim_init.lua"
     # Source installs need the same private dependency path on future launches.
     if $DRY_RUN; then echo "+ write source launcher at $DATA_DIR/source-launcher"
     else
@@ -273,11 +273,11 @@ PY
                 printf 'export PATH=%q:"$PATH"\n' "$TOOLS_DIR/bin"
             fi
             if [ "$BOOTSTRAP_NVIM" != nvim ]; then printf 'export VIMRUNTIME=%q\n' "$TOOLS_DIR/nvim/share/nvim/runtime"; fi
-            printf 'exec %q "$@"\n' "$SOURCE_DIR/zig-out/bin/vide"
+            printf 'exec %q "$@"\n' "$SOURCE_DIR/zig-out/bin/tuim"
         } >"$DATA_DIR/source-launcher"
         chmod 755 "$DATA_DIR/source-launcher"
     fi
-    run ln -sfn "$DATA_DIR/source-launcher" "$BIN_DIR/vide"
+    run ln -sfn "$DATA_DIR/source-launcher" "$BIN_DIR/tuim"
 else
     # Resolve latest once so the archive, checksum, and fallback init use one tag.
     run curl -fsSL --retry 3 -o "$DOWNLOAD_DIR/release.json" "https://api.github.com/repos/$REPO/releases/latest"
@@ -296,10 +296,10 @@ else
         fi
         tar -xzf "$DOWNLOAD_DIR/$RELEASE_ASSET" -C "$DOWNLOAD_DIR"
         BUNDLE_DIR="$DOWNLOAD_DIR/${RELEASE_ASSET%.tar.gz}"
-        for executable in bin/vide lib/vide/vide lib/vide/nvim/bin/nvim; do
+        for executable in bin/tuim lib/tuim/tuim lib/tuim/nvim/bin/nvim; do
             [ -x "$BUNDLE_DIR/$executable" ] || { echo "Invalid release bundle: missing $executable" >&2; exit 1; }
         done
-        [ -d "$BUNDLE_DIR/lib/vide/nvim/share/nvim/runtime" ] || { echo "Neovim runtime missing from release." >&2; exit 1; }
+        [ -d "$BUNDLE_DIR/lib/tuim/nvim/share/nvim/runtime" ] || { echo "Neovim runtime missing from release." >&2; exit 1; }
         INSTALL_DIR="$DATA_DIR/runtime"
         BACKUP_DIR="$DATA_DIR/runtime.previous"
         rm -rf "$BACKUP_DIR"
@@ -308,20 +308,20 @@ else
             if [ -e "$BACKUP_DIR" ]; then mv "$BACKUP_DIR" "$INSTALL_DIR"; fi
             exit 1
         fi
-        ln -sfn "$INSTALL_DIR/bin/vide" "$BIN_DIR/vide"
+        ln -sfn "$INSTALL_DIR/bin/tuim" "$BIN_DIR/tuim"
         rm -rf "$BACKUP_DIR"
     else
         echo "+ verify SHA256SUMS for $RELEASE_ASSET"
         echo "+ install bundled Neovim runtime from $RELEASE_ASSET"
-        echo "+ link $BIN_DIR/vide to its private launcher"
+        echo "+ link $BIN_DIR/tuim to its private launcher"
     fi
-    BOOTSTRAP_NVIM="$DATA_DIR/runtime/lib/vide/nvim/bin/nvim"
-    export VIMRUNTIME="$DATA_DIR/runtime/lib/vide/nvim/share/nvim/runtime"
-    INIT_PATH="$DATA_DIR/runtime/lib/vide/vide_init.lua"
+    BOOTSTRAP_NVIM="$DATA_DIR/runtime/lib/tuim/nvim/bin/nvim"
+    export VIMRUNTIME="$DATA_DIR/runtime/lib/tuim/nvim/share/nvim/runtime"
+    INIT_PATH="$DATA_DIR/runtime/lib/tuim/tuim_init.lua"
     if ! $NO_PLUGINS && { $DRY_RUN || [ ! -f "$INIT_PATH" ]; }; then
         # Compatibility with releases made before the init was included in bundles.
-        INIT_PATH="$DOWNLOAD_DIR/vide_init.lua"
-        run curl -fsSL --retry 3 -o "$INIT_PATH" "https://raw.githubusercontent.com/$REPO/$RELEASE_TAG/src/nvim/vide_init.lua"
+        INIT_PATH="$DOWNLOAD_DIR/tuim_init.lua"
+        run curl -fsSL --retry 3 -o "$INIT_PATH" "https://raw.githubusercontent.com/$REPO/$RELEASE_TAG/src/nvim/tuim_init.lua"
     fi
 fi
 report_update_progress 85
@@ -331,13 +331,13 @@ if ! $NO_PLUGINS; then
         cat >"$DOWNLOAD_DIR/bootstrap.lua" <<'LUA'
 local ok, err = xpcall(function()
     vim.rpcnotify = function() return true end
-    dofile(vim.env.VIDE_INIT_PATH)
-    assert(not vim.g.vide_plugins_disabled, 'Plugin bootstrap failed; check Git and network access')
+    dofile(vim.env.TUIM_INIT_PATH)
+    assert(not vim.g.tuim_plugins_disabled, 'Plugin bootstrap failed; check Git and network access')
     require('lazy').sync({ wait = true, show = false })
     require('lazy').load({ plugins = { 'nvim-treesitter', 'vscode.nvim' } })
     local ts = require('nvim-treesitter')
     ts.setup({ install_dir = vim.fn.stdpath('data') .. '/site' })
-    local parsers = _G.vide_default_parsers or { 'bash', 'c', 'cpp', 'css', 'go', 'html', 'javascript', 'json', 'lua', 'markdown', 'markdown_inline', 'python', 'query', 'rust', 'tsx', 'typescript', 'vim', 'vimdoc', 'zig' }
+    local parsers = _G.tuim_default_parsers or { 'bash', 'c', 'cpp', 'css', 'go', 'html', 'javascript', 'json', 'lua', 'markdown', 'markdown_inline', 'python', 'query', 'rust', 'tsx', 'typescript', 'vim', 'vimdoc', 'zig' }
     ts.install(parsers):wait(300000)
     vim.opt.rtp:prepend(vim.fn.stdpath("data") .. "/site")
     for _, lang in ipairs(parsers) do
@@ -355,14 +355,14 @@ if not ok then
     io.stderr:write(tostring(err), '\n')
     vim.cmd('cquit 1')
 end
-print('Vide plugins and Treesitter parsers are ready.')
+print('Tuim plugins and Treesitter parsers are ready.')
 vim.cmd('qa!')
 LUA
     fi
-    run env -u VIDE_DISABLE_PLUGINS NVIM_APPNAME=vide VIDE_SKIP_ONBOARDING=1 VIDE_INIT_PATH="$INIT_PATH" \
+    run env -u TUIM_DISABLE_PLUGINS NVIM_APPNAME=tuim TUIM_SKIP_ONBOARDING=1 TUIM_INIT_PATH="$INIT_PATH" \
         "$BOOTSTRAP_NVIM" --clean --headless -l "$DOWNLOAD_DIR/bootstrap.lua"
 fi
 if $DRY_RUN; then echo "Dry run complete; no files or packages were changed."
-else report_update_progress 100; echo "Vide installed at $BIN_DIR/vide"; fi
+else report_update_progress 100; echo "Tuim installed at $BIN_DIR/tuim"; fi
 $IS_WSL && echo "WSL detected; clipboard behavior depends on Windows Terminal and WSL integration."
 [[ ":$PATH:" = *":$BIN_DIR:"* ]] || echo "Add $BIN_DIR to PATH."

@@ -31,6 +31,6 @@
     │                             │~
     │                             │~
     │                             │~
-  * │                             │/tmp/vide-capture.7b9mFA/completion-project/demo.lua           H:1 1,1            All
+  * │                             │/tmp/tuim-capture.7b9mFA/completion-project/demo.lua           H:1 1,1            All
     │                             │-- INSERT --
   NORMAL     * main  demo.lua                                                                  Focus: Editor   [?] Help

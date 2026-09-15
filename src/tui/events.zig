@@ -39,7 +39,7 @@ fn editorActionCode(action: []const u8, code_buf: []u8) ?[]const u8 {
     else if (std.mem.eql(u8, action, "ai_add_context"))
         "_G.SendSelectionToAI()"
     else
-        std.fmt.bufPrint(code_buf, "_G.vide_ide_action('{s}')", .{action}) catch null;
+        std.fmt.bufPrint(code_buf, "_G.tuim_ide_action('{s}')", .{action}) catch null;
 }
 
 fn executeEditorAction(a: *App, action: []const u8) void {
@@ -59,7 +59,7 @@ test "editor context AI actions route to the AI bridge" {
     try std.testing.expectEqualStrings("_G.RunAIAction('explain_selection')", editorActionCode("ai_explain_selection", &buf).?);
     try std.testing.expectEqualStrings("_G.RunAIAction('fix_selection')", editorActionCode("ai_fix_selection", &buf).?);
     try std.testing.expectEqualStrings("_G.SendSelectionToAI()", editorActionCode("ai_add_context", &buf).?);
-    try std.testing.expectEqualStrings("_G.vide_ide_action('copy')", editorActionCode("copy", &buf).?);
+    try std.testing.expectEqualStrings("_G.tuim_ide_action('copy')", editorActionCode("copy", &buf).?);
 }
 
 test "AI context commands keep sidebar focus" {
@@ -85,7 +85,7 @@ fn writeHandoffInit(path: []const u8, content: []const u8) void {
 }
 
 fn ensureTerminalStarted(a: *App) !void {
-    const params = [_]Value{.{ .string = "lua _G.vide_ensure_terminal()" }};
+    const params = [_]Value{.{ .string = "lua _G.tuim_ensure_terminal()" }};
     try a.rpc_term.notify("nvim_command", &params);
 }
 
@@ -95,10 +95,10 @@ fn startRequestedSoftwareUpdate(a: *App) void {
     a.settings_widget.startSoftwareUpdate() catch |err| {
         a.settings_widget.software_update_status = .failure;
         a.notify(.failure, "Unable to start software update: {}", .{err});
-        std.log.err("Unable to start Vide software update: {}", .{err});
+        std.log.err("Unable to start Tuim software update: {}", .{err});
         return;
     };
-    a.notify(.info, "Downloading the latest Vide release in the background...", .{});
+    a.notify(.info, "Downloading the latest Tuim release in the background...", .{});
 }
 
 const workspace = @import("workspace.zig");
@@ -135,12 +135,12 @@ fn workspaceAction(a: *App, action: workspace.Action, layout: Layout) anyerror!v
         .find_file => {
             a.sidebar_focus = false;
             a.terminal_focus = false;
-            workspace.command(a, "_G.vide_close_floating_windows(); local ok = pcall(vim.cmd, 'Telescope find_files'); if not ok then vim.ui.input({prompt='Open file: ', completion='file'}, function(p) if p and p ~= '' then vim.cmd.edit(vim.fn.fnameescape(p)) end end) end");
+            workspace.command(a, "_G.tuim_close_floating_windows(); local ok = pcall(vim.cmd, 'Telescope find_files'); if not ok then vim.ui.input({prompt='Open file: ', completion='file'}, function(p) if p and p ~= '' then vim.cmd.edit(vim.fn.fnameescape(p)) end end) end");
         },
         .search_project => {
             a.sidebar_focus = false;
             a.terminal_focus = false;
-            workspace.command(a, "_G.vide_close_floating_windows(); local ok, err = pcall(vim.cmd, 'Telescope live_grep'); if not ok then _G.vide_native_notice('error', 'Project search is unavailable: ' .. tostring(err)) end");
+            workspace.command(a, "_G.tuim_close_floating_windows(); local ok, err = pcall(vim.cmd, 'Telescope live_grep'); if not ok then _G.tuim_native_notice('error', 'Project search is unavailable: ' .. tostring(err)) end");
         },
         .explorer, .git, .ai, .extensions => {
             if (a.mode == .zen) _ = try handleKey(a, .{ .char = 0, .raw = kb.toggle_zen }, layout);
@@ -167,7 +167,7 @@ fn workspaceAction(a: *App, action: workspace.Action, layout: Layout) anyerror!v
         .save => {
             a.sidebar_focus = false;
             a.terminal_focus = false;
-            workspace.command(a, "_G.vide_save_file()");
+            workspace.command(a, "_G.tuim_save_file()");
         },
         .problems => {
             a.sidebar_focus = false;
@@ -192,7 +192,7 @@ fn workspaceAction(a: *App, action: workspace.Action, layout: Layout) anyerror!v
         .close_file => {
             a.sidebar_focus = false;
             a.terminal_focus = false;
-            workspace.command(a, "_G.vide_close_buffer(vim.api.nvim_get_current_buf())");
+            workspace.command(a, "_G.tuim_close_buffer(vim.api.nvim_get_current_buf())");
         },
         .buffers => workspace.openBuffers(a),
         .commands => workspace.openPalette(a),
@@ -578,7 +578,7 @@ pub fn handleKey(a: *App, k: input.KeyEvent, layout: Layout) !bool {
         return true;
     }
     if (std.mem.eql(u8, nk, kb.commands)) {
-        if (a.ui_state.native_picker_chrome) workspace.command(a, "_G.vide_picker_action('close')");
+        if (a.ui_state.native_picker_chrome) workspace.command(a, "_G.tuim_picker_action('close')");
         workspace.openPalette(a);
         return true;
     }
@@ -588,7 +588,7 @@ pub fn handleKey(a: *App, k: input.KeyEvent, layout: Layout) !bool {
         a.rpc.notify("nvim_input", &params) catch {};
         return true;
     }
-    if (a.ui_state.native_picker_chrome) workspace.command(a, "_G.vide_picker_action('close')");
+    if (a.ui_state.native_picker_chrome) workspace.command(a, "_G.tuim_picker_action('close')");
     if (std.mem.eql(u8, nk, kb.focus_next) or std.mem.eql(u8, nk, "<S-F6>")) {
         const reverse = std.mem.eql(u8, nk, "<S-F6>");
         if (a.mode != .zen) {
@@ -606,7 +606,7 @@ pub fn handleKey(a: *App, k: input.KeyEvent, layout: Layout) !bool {
     }
     if (!a.terminal_focus and std.mem.eql(u8, nk, kb.save_file)) {
         a.sidebar_focus = false;
-        workspace.command(a, "_G.vide_save_file()");
+        workspace.command(a, "_G.tuim_save_file()");
         return true;
     }
     if (std.mem.eql(u8, nk, kb.toggle_terminal) or std.mem.eql(u8, k.raw, kb.toggle_terminal)) toggle_terminal_panel = true;
@@ -619,19 +619,19 @@ pub fn handleKey(a: *App, k: input.KeyEvent, layout: Layout) !bool {
     if (toggle_zen) {
         if (a.settings_widget.config.zen_handoff) {
             const dir_path = std.fs.path.dirname(a.settings_widget.settings_path) orelse ".";
-            const session_path = try std.fs.path.join(a.allocator, &[_][]const u8{ dir_path, "vide_session.vim" });
+            const session_path = try std.fs.path.join(a.allocator, &[_][]const u8{ dir_path, "tuim_session.vim" });
             defer a.allocator.free(session_path);
-            const handoff_path = try std.fs.path.join(a.allocator, &[_][]const u8{ dir_path, "vide_handoff_init.lua" });
+            const handoff_path = try std.fs.path.join(a.allocator, &[_][]const u8{ dir_path, "tuim_handoff_init.lua" });
             defer a.allocator.free(handoff_path);
 
             // Write handoff init: same plugins + retoggle keybind
             const zen_key = a.settings_widget.config.keybindings.toggle_zen;
-            const vide_init_lua = @embedFile("../nvim/vide_init.lua");
-            const handoff_buf = try a.allocator.alloc(u8, vide_init_lua.len + session_path.len + 512);
+            const tuim_init_lua = @embedFile("../nvim/tuim_init.lua");
+            const handoff_buf = try a.allocator.alloc(u8, tuim_init_lua.len + session_path.len + 512);
             defer a.allocator.free(handoff_buf);
-            const handoff_script = std.fmt.bufPrint(handoff_buf, "-- vide handoff\n{s}\nvim.schedule(function()\n" ++
+            const handoff_script = std.fmt.bufPrint(handoff_buf, "-- tuim handoff\n{s}\nvim.schedule(function()\n" ++
                 "  local function back() vim.cmd('silent! wa') vim.cmd('mksession! {s}') vim.cmd('qa') end\n" ++
-                "  vim.keymap.set({{'n','v','i','t'}}, '{s}', back, {{silent=true, desc='Return to vide'}})\nend)\n", .{ vide_init_lua, session_path, zen_key }) catch vide_init_lua;
+                "  vim.keymap.set({{'n','v','i','t'}}, '{s}', back, {{silent=true, desc='Return to tuim'}})\nend)\n", .{ tuim_init_lua, session_path, zen_key }) catch tuim_init_lua;
 
             writeHandoffInit(handoff_path, handoff_script);
             const save_script = try std.fmt.allocPrint(a.allocator, "vim.cmd('silent! wa'); vim.cmd('mksession! {s}')", .{session_path});
@@ -655,7 +655,7 @@ pub fn handleKey(a: *App, k: input.KeyEvent, layout: Layout) !bool {
 
                 var cmd_p = [_]Value{.{ .string = "set laststatus=0" }};
                 _ = a.rpc.call("nvim_command", &cmd_p) catch {};
-                cmd_p[0] = .{ .string = "lua vim.g.vide_zen_mode = true; vim.g.vide_ide_mode = false; _G.vide_disable_ide_mode(); if _G.vide_update_dashboard_keys then _G.vide_update_dashboard_keys() end; pcall(function() require('alpha').redraw() end)" };
+                cmd_p[0] = .{ .string = "lua vim.g.tuim_zen_mode = true; vim.g.tuim_ide_mode = false; _G.tuim_disable_ide_mode(); if _G.tuim_update_dashboard_keys then _G.tuim_update_dashboard_keys() end; pcall(function() require('alpha').redraw() end)" };
                 _ = a.rpc.call("nvim_command", &cmd_p) catch {};
             } else {
                 a.mode = a.prev_mode;
@@ -670,9 +670,9 @@ pub fn handleKey(a: *App, k: input.KeyEvent, layout: Layout) !bool {
                 var cmd_p = [_]Value{.{ .string = "set laststatus=0" }};
                 _ = a.rpc.call("nvim_command", &cmd_p) catch {};
                 cmd_p[0] = .{ .string = if (a.mode == .ide)
-                    "lua vim.g.vide_zen_mode = false; vim.g.vide_ide_mode = true; _G.vide_enable_ide_mode(); if _G.vide_update_dashboard_keys then _G.vide_update_dashboard_keys() end; pcall(function() require('alpha').redraw() end)"
+                    "lua vim.g.tuim_zen_mode = false; vim.g.tuim_ide_mode = true; _G.tuim_enable_ide_mode(); if _G.tuim_update_dashboard_keys then _G.tuim_update_dashboard_keys() end; pcall(function() require('alpha').redraw() end)"
                 else
-                    "lua vim.g.vide_zen_mode = false; vim.g.vide_ide_mode = false; _G.vide_disable_ide_mode(); if _G.vide_update_dashboard_keys then _G.vide_update_dashboard_keys() end; pcall(function() require('alpha').redraw() end)" };
+                    "lua vim.g.tuim_zen_mode = false; vim.g.tuim_ide_mode = false; _G.tuim_disable_ide_mode(); if _G.tuim_update_dashboard_keys then _G.tuim_update_dashboard_keys() end; pcall(function() require('alpha').redraw() end)" };
                 _ = a.rpc.call("nvim_command", &cmd_p) catch {};
             }
             a.invalidations.damageAll();
@@ -711,7 +711,7 @@ pub fn handleKey(a: *App, k: input.KeyEvent, layout: Layout) !bool {
     } else if (new_file) {
         a.sidebar_focus = false;
         a.terminal_focus = false;
-        const cmd_p = [1]Value{.{ .string = "_G.vide_close_floating_windows(); vim.cmd('enew')" }};
+        const cmd_p = [1]Value{.{ .string = "_G.tuim_close_floating_windows(); vim.cmd('enew')" }};
         const params = [2]Value{ cmd_p[0], .{ .array = &[_]Value{} } };
         if (a.rpc.call("nvim_exec_lua", &params) catch null) |res| {
             @import("../nvim/msgpack.zig").freeValue(res, a.allocator);
@@ -947,13 +947,13 @@ pub fn handleMouse(a: *App, m: input.MouseEvent, layout: Layout) !void {
             if (m.action == .press and m.button == .left) {
                 if (workspace.pickerFooterAction(layout.status_bar.w, m.col)) |action| {
                     var code: [96]u8 = undefined;
-                    workspace.command(a, std.fmt.bufPrint(&code, "_G.vide_picker_action('{s}')", .{@tagName(action)}) catch return);
+                    workspace.command(a, std.fmt.bufPrint(&code, "_G.tuim_picker_action('{s}')", .{@tagName(action)}) catch return);
                 }
             }
             return;
         }
         if (m.col < layout.editor.x or m.col >= layout.editor.x + layout.editor.w or m.row < layout.editor.y or m.row >= layout.editor.y + layout.editor.h) {
-            if (m.action == .press and m.button == .left) workspace.command(a, "_G.vide_picker_action('close')");
+            if (m.action == .press and m.button == .left) workspace.command(a, "_G.tuim_picker_action('close')");
             return;
         }
         nvim_helpers.sendMouseEvent(a.rpc, a.allocator, m, m.col - layout.editor.x, m.row - layout.editor.y);
@@ -1164,7 +1164,7 @@ pub fn handleMouse(a: *App, m: input.MouseEvent, layout: Layout) !void {
                 startRequestedSoftwareUpdate(a);
                 if (a.settings_widget.save_failed) {
                     a.settings_widget.save_failed = false;
-                    a.notify(.failure, "Settings could not be saved; check path permissions and the Vide log.", .{});
+                    a.notify(.failure, "Settings could not be saved; check path permissions and the Tuim log.", .{});
                     std.log.err("Unable to save settings at {s}", .{a.settings_widget.settings_path});
                 }
                 if (a.settings_widget.open_mason) {

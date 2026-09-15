@@ -4,8 +4,8 @@ set -euo pipefail
 check_plan() {
     local platform=$1 manager=$2 expected=$3
     local output
-    output=$(VIDE_TEST_PLATFORM="$platform" VIDE_TEST_PACKAGE_MANAGER="$manager" \
-        VIDE_TEST_MISSING="curl nvim git" VIDE_TEST_ONLY=1 \
+    output=$(TUIM_TEST_PLATFORM="$platform" TUIM_TEST_PACKAGE_MANAGER="$manager" \
+        TUIM_TEST_MISSING="curl nvim git" TUIM_TEST_ONLY=1 \
         bash setup.sh --dry-run --yes --no-plugins)
     grep -Fq "$expected" <<< "$output"
     grep -Fq "curl neovim git" <<< "$output"
@@ -17,36 +17,36 @@ check_plan Linux dnf "dnf install"
 check_plan Linux zypper "zypper install"
 check_plan Darwin brew "brew install"
 for manager in apt pacman dnf zypper; do
-    tools_output=$(VIDE_TEST_PLATFORM=Linux VIDE_TEST_PACKAGE_MANAGER="$manager" \
-        VIDE_TEST_MISSING="python3 cc make unzip rg tar gzip" VIDE_TEST_ONLY=1 \
+    tools_output=$(TUIM_TEST_PLATFORM=Linux TUIM_TEST_PACKAGE_MANAGER="$manager" \
+        TUIM_TEST_MISSING="python3 cc make unzip rg tar gzip" TUIM_TEST_ONLY=1 \
         bash setup.sh --dry-run --yes)
     grep -Fq gcc <<< "$tools_output"
     grep -Fq ripgrep <<< "$tools_output"
     grep -Fq unzip <<< "$tools_output"
 done
 
-wsl_output=$(VIDE_TEST_PLATFORM=Linux VIDE_TEST_PACKAGE_MANAGER=apt VIDE_TEST_WSL=1 \
-    VIDE_TEST_MISSING="curl nvim git" VIDE_TEST_ONLY=1 \
+wsl_output=$(TUIM_TEST_PLATFORM=Linux TUIM_TEST_PACKAGE_MANAGER=apt TUIM_TEST_WSL=1 \
+    TUIM_TEST_MISSING="curl nvim git" TUIM_TEST_ONLY=1 \
     bash setup.sh --dry-run --yes --no-plugins)
 grep -Fq "WSL path detected" <<< "$wsl_output"
 
 check_asset() {
     local platform=$1 arch=$2 expected=$3
     local output
-    output=$(VIDE_TEST_PLATFORM="$platform" VIDE_TEST_ARCH="$arch" \
-        VIDE_TEST_MISSING="" VIDE_TEST_ONLY=release bash setup.sh)
+    output=$(TUIM_TEST_PLATFORM="$platform" TUIM_TEST_ARCH="$arch" \
+        TUIM_TEST_MISSING="" TUIM_TEST_ONLY=release bash setup.sh)
     [ "$output" = "$expected" ]
 }
 
-check_asset Linux x86_64 vide-linux-x86_64.tar.gz
-check_asset Linux aarch64 vide-linux-aarch64.tar.gz
-check_asset Darwin x86_64 vide-macos-x86_64.tar.gz
-check_asset Darwin arm64 vide-macos-aarch64.tar.gz
+check_asset Linux x86_64 tuim-linux-x86_64.tar.gz
+check_asset Linux aarch64 tuim-linux-aarch64.tar.gz
+check_asset Darwin x86_64 tuim-macos-x86_64.tar.gz
+check_asset Darwin arm64 tuim-macos-aarch64.tar.gz
 
-progress_file=$(mktemp "${TMPDIR:-/tmp}/vide-setup-progress.XXXXXX")
-fixture_dir=$(mktemp -d "${TMPDIR:-/tmp}/vide-setup-tests.XXXXXX")
+progress_file=$(mktemp "${TMPDIR:-/tmp}/tuim-setup-progress.XXXXXX")
+fixture_dir=$(mktemp -d "${TMPDIR:-/tmp}/tuim-setup-tests.XXXXXX")
 trap 'rm -f "$progress_file"; rm -rf "$fixture_dir"' EXIT
-VIDE_TEST_PLATFORM=Linux VIDE_TEST_ARCH=x86_64 VIDE_UPDATE_PROGRESS_FILE="$progress_file" \
+TUIM_TEST_PLATFORM=Linux TUIM_TEST_ARCH=x86_64 TUIM_UPDATE_PROGRESS_FILE="$progress_file" \
     bash setup.sh --dry-run --no-plugins >/dev/null
 [ ! -s "$progress_file" ] # --dry-run must not write update progress
 
@@ -66,13 +66,13 @@ printf '#!/bin/sh\nexit 1\n' > "$fixture_dir/bin/git"
 printf '#!/bin/sh\nexit 0\n' > "$fixture_dir/homebrew/bin/brew"
 chmod +x "$fixture_dir/bin/curl" "$fixture_dir/bin/git" "$fixture_dir/homebrew/bin/brew"
 brew_output=$(PATH="$fixture_dir/bin" HOMEBREW_PREFIX="$fixture_dir/homebrew" \
-    VIDE_TEST_PLATFORM=Darwin VIDE_TEST_ARCH=arm64 VIDE_TEST_ONLY=1 \
+    TUIM_TEST_PLATFORM=Darwin TUIM_TEST_ARCH=arm64 TUIM_TEST_ONLY=1 \
     "$bash_bin" setup.sh --dry-run --yes)
 grep -Fq 'brew install git' <<< "$brew_output"
 if grep -Fq neovim <<< "$brew_output"; then exit 1; fi
 
 no_plugins_output=$(PATH="$fixture_dir/bin" HOMEBREW_PREFIX="$fixture_dir/homebrew" \
-    VIDE_TEST_PLATFORM=Darwin VIDE_TEST_ARCH=arm64 VIDE_TEST_ONLY=1 \
+    TUIM_TEST_PLATFORM=Darwin TUIM_TEST_ARCH=arm64 TUIM_TEST_ONLY=1 \
     "$bash_bin" setup.sh --dry-run --yes --no-plugins)
 [ -z "$no_plugins_output" ]
 
@@ -80,13 +80,13 @@ no_plugins_output=$(PATH="$fixture_dir/bin" HOMEBREW_PREFIX="$fixture_dir/homebr
 printf '#!/bin/sh\nexit 0\n' > "$fixture_dir/homebrew/bin/git"
 chmod +x "$fixture_dir/homebrew/bin/git"
 installed_output=$(PATH="$fixture_dir/bin" HOMEBREW_PREFIX="$fixture_dir/homebrew" \
-    VIDE_TEST_PLATFORM=Darwin VIDE_TEST_ARCH=arm64 VIDE_TEST_ONLY=1 \
+    TUIM_TEST_PLATFORM=Darwin TUIM_TEST_ARCH=arm64 TUIM_TEST_ONLY=1 \
     "$bash_bin" setup.sh --dry-run --yes)
 [ -z "$installed_output" ]
 
-bootstrap_output=$(VIDE_TEST_PLATFORM=Darwin VIDE_TEST_ARCH=arm64 \
+bootstrap_output=$(TUIM_TEST_PLATFORM=Darwin TUIM_TEST_ARCH=arm64 \
     XDG_DATA_HOME="$fixture_dir/data" bash setup.sh --dry-run --yes)
-grep -Fq "$fixture_dir/data/vide/runtime/lib/vide/nvim/bin/nvim --clean --headless" <<< "$bootstrap_output"
-grep -Fq vide-macos-aarch64.tar.gz <<< "$bootstrap_output"
+grep -Fq "$fixture_dir/data/tuim/runtime/lib/tuim/nvim/bin/nvim --clean --headless" <<< "$bootstrap_output"
+grep -Fq tuim-macos-aarch64.tar.gz <<< "$bootstrap_output"
 
 echo "Installer package-manager and release-asset plans passed"

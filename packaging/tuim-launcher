@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+
+LAUNCHER=$0
+while [ -L "$LAUNCHER" ]; do
+    LAUNCHER_DIR=$(CDPATH='' cd -P -- "$(dirname -- "$LAUNCHER")" && pwd)
+    LINK_TARGET=$(readlink "$LAUNCHER")
+    case "$LINK_TARGET" in
+        /*) LAUNCHER=$LINK_TARGET ;;
+        *) LAUNCHER=$LAUNCHER_DIR/$LINK_TARGET ;;
+    esac
+done
+
+HERE=$(CDPATH='' cd -P -- "$(dirname -- "$LAUNCHER")" && pwd)
+RUNTIME="$HERE/../lib/tuim"
+export PATH="$RUNTIME/nvim/bin:$PATH"
+export VIMRUNTIME="$RUNTIME/nvim/share/nvim/runtime"
+exec "$RUNTIME/tuim" "$@"

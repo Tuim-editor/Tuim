@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Test real Telescope windows in an isolated Vide terminal session.
+"""Test real Telescope windows in an isolated Tuim terminal session.
 
 Uses installed Telescope/plenary sources, without lazy bootstrap or downloads.
 """
@@ -17,11 +17,11 @@ def run(plugin_root, capture):
     for plugin in ("telescope.nvim", "plenary.nvim"):
         if not (plugin_root / plugin / "lua").is_dir():
             raise SystemExit(f"Missing local dependency: {plugin_root / plugin}")
-    with tempfile.TemporaryDirectory(prefix="vide-picker-test-") as directory:
+    with tempfile.TemporaryDirectory(prefix="tuim-picker-test-") as directory:
         base = pathlib.Path(directory)
-        for name in ("config", "data/vide", "state", "cache", "project"):
+        for name in ("config", "data/tuim", "state", "cache", "project"):
             (base / name).mkdir(parents=True, exist_ok=True)
-        (base / "data/vide/settings.json").write_text('{"mode":"normal","nerd_fonts":false}')
+        (base / "data/tuim/settings.json").write_text('{"mode":"normal","nerd_fonts":false}')
         project = base / "project"
         (project / "alpha.lua").write_text('-- alpha preview\nlocal answer = 42\nreturn answer\n')
         (project / "beta.lua").write_text('-- beta preview\nreturn "hello"\n')
@@ -29,7 +29,7 @@ def run(plugin_root, capture):
         setup.write_text("\n".join([
             f"vim.opt.rtp:prepend({str(plugin_root / plugin)!r})"
             for plugin in ("plenary.nvim", "telescope.nvim")
-        ]) + "\nvim.cmd('runtime plugin/telescope.lua')\nlocal ok, err = pcall(_G.vide_configure_pickers)\n"
+        ]) + "\nvim.cmd('runtime plugin/telescope.lua')\nlocal ok, err = pcall(_G.tuim_configure_pickers)\n"
             + f"vim.fn.writefile({{tostring(ok), tostring(err)}}, {str(base / 'setup-result')!r})\n")
         socket = str(base / "tmux.sock")
 
@@ -77,13 +77,13 @@ def run(plugin_root, capture):
         env = {
             "XDG_CONFIG_HOME": str(base / "config"), "XDG_DATA_HOME": str(base / "data"),
             "XDG_STATE_HOME": str(base / "state"), "XDG_CACHE_HOME": str(base / "cache"),
-            "VIDE_DISABLE_PLUGINS": "1", "VIDE_SKIP_ONBOARDING": "1", "TERM": "xterm-256color",
+            "TUIM_DISABLE_PLUGINS": "1", "TUIM_SKIP_ONBOARDING": "1", "TERM": "xterm-256color",
         }
-        launch = shlex.join(["env", *(f"{k}={v}" for k, v in env.items()), str(ROOT / "zig-out/bin/vide"), str(project / "alpha.lua")])
+        launch = shlex.join(["env", *(f"{k}={v}" for k, v in env.items()), str(ROOT / "zig-out/bin/tuim"), str(project / "alpha.lua")])
         try:
             tmux("new-session", "-d", "-s", "ui", "-x", "160", "-y", "38", "-c", str(project), launch)
             tmux("set-option", "-t", "ui", "remain-on-exit", "on")
-            wait_for(lambda s: ("WORKSPACE" in s or "EXPLORER" in s) and "alpha.lua" in s, "Vide did not start")
+            wait_for(lambda s: ("WORKSPACE" in s or "EXPLORER" in s) and "alpha.lua" in s, "Tuim did not start")
             time.sleep(0.3)
             wait_for(lambda s: "Plugins are disabled" not in s, "Startup notice did not clear", timeout=12)
             command("luafile " + str(setup))
@@ -154,7 +154,7 @@ def run(plugin_root, capture):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--plugin-root", type=pathlib.Path, default=pathlib.Path.home() / ".local/share/vide/lazy")
+    parser.add_argument("--plugin-root", type=pathlib.Path, default=pathlib.Path.home() / ".local/share/tuim/lazy")
     parser.add_argument("--capture", type=pathlib.Path)
     args = parser.parse_args()
     run(args.plugin_root, args.capture)

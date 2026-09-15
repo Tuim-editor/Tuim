@@ -1,5 +1,5 @@
 #!/bin/bash
-# Vide updater
+# Tuim updater
 
 set -euo pipefail
 
@@ -35,11 +35,11 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-echo -e "${BLUE}Checking for Vide updates...${NC}"
+echo -e "${BLUE}Checking for Tuim updates...${NC}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VIDE_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/vide"
-REPO_DIR="$VIDE_DATA_HOME/repo"
+TUIM_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/tuim"
+REPO_DIR="$TUIM_DATA_HOME/repo"
 
 if [ -d "$SCRIPT_DIR/config" ]; then
     TARGET_DIR="$SCRIPT_DIR"
@@ -67,7 +67,7 @@ if [ -d ".git" ]; then
 
     echo "Pulling latest changes from remote Git repository..."
     git pull --ff-only
-    echo -e "${BLUE}Rebuilding Vide...${NC}"
+    echo -e "${BLUE}Rebuilding Tuim...${NC}"
     zig build -Doptimize=ReleaseFast
 else
     echo -e "${YELLOW}Warning: No git repository detected in $TARGET_DIR. Skipping git update.${NC}"
@@ -75,10 +75,10 @@ fi
 
 if [ "$SYNC_PLUGINS" -eq 1 ] && command -v nvim &>/dev/null; then
     echo -e "${BLUE}Updating Neovim plugins...${NC}"
-    NVIM_APPNAME="vide" VIDE_INIT_PATH="$TARGET_DIR/src/nvim/vide_init.lua" \
+    NVIM_APPNAME="tuim" TUIM_INIT_PATH="$TARGET_DIR/src/nvim/tuim_init.lua" \
         nvim --clean --headless \
-        -c "execute 'luafile ' .. fnameescape(\$VIDE_INIT_PATH)" \
+        -c "execute 'luafile ' .. fnameescape(\$TUIM_INIT_PATH)" \
         -c "Lazy! sync" -c "qa"
 fi
 
-echo -e "\n${GREEN}✔ Vide updated successfully!${NC}"
+echo -e "\n${GREEN}✔ Tuim updated successfully!${NC}"

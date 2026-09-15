@@ -9,7 +9,7 @@ permissions:
 jobs:
   wsl-smoke:
     # A self-hosted label prevents a Windows simulation from being recorded as
-    # WSL evidence. The runner must provide WSL 2 with Zig 0.16, Neovim, and
+    # WSL evidence. The runner must protuim WSL 2 with Zig 0.16, Neovim, and
     # Python 3 installed inside its default distribution.
     runs-on: [self-hosted, windows, wsl]
     steps:

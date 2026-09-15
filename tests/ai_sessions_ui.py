@@ -8,11 +8,11 @@ import tempfile
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix="vide-ai-ui-") as directory:
+with tempfile.TemporaryDirectory(prefix="tuim-ai-ui-") as directory:
     base = pathlib.Path(directory)
-    for name in ("config", "data/vide", "state", "cache", "bin"):
+    for name in ("config", "data/tuim", "state", "cache", "bin"):
         (base / name).mkdir(parents=True)
-    (base / "data/vide/settings.json").write_text('{"mode":"normal","nerd_fonts":false}')
+    (base / "data/tuim/settings.json").write_text('{"mode":"normal","nerd_fonts":false}')
     sample = base / "sample.py"
     sample.write_text('print("hello")\n')
     for name in ("codex", "claude"):
@@ -48,9 +48,9 @@ with tempfile.TemporaryDirectory(prefix="vide-ai-ui-") as directory:
         # Keep availability deterministic: only the fixture CLIs should be
         # discoverable, even when the host has other assistant commands.
         "PATH": str(base / "bin") + os.pathsep + "/usr/bin:/bin",
-        "VIDE_DISABLE_PLUGINS": "1", "VIDE_SKIP_ONBOARDING": "1", "TERM": "xterm-256color", "SHELL": "/bin/sh",
+        "TUIM_DISABLE_PLUGINS": "1", "TUIM_SKIP_ONBOARDING": "1", "TERM": "xterm-256color", "SHELL": "/bin/sh",
     }
-    command = shlex.join(["env", *(f"{k}={v}" for k, v in env.items()), str(ROOT / "zig-out/bin/vide"), str(sample)])
+    command = shlex.join(["env", *(f"{k}={v}" for k, v in env.items()), str(ROOT / "zig-out/bin/tuim"), str(sample)])
     try:
         tmux("new-session", "-d", "-s", "ui", "-x", "120", "-y", "36", "-c", str(base), command)
         wait_for('sample.py')
@@ -109,7 +109,7 @@ with tempfile.TemporaryDirectory(prefix="vide-ai-ui-") as directory:
         click("Codex")
         click("Return to chat")
         grid = wait_for("Chat open")
-        pathlib.Path('/tmp/vide-ai-expanded.txt').write_text(grid)
+        pathlib.Path('/tmp/tuim-ai-expanded.txt').write_text(grid)
         wait_for("Send selection")
         wait_for("Send file")
         wait_for("Review changes")
@@ -117,7 +117,7 @@ with tempfile.TemporaryDirectory(prefix="vide-ai-ui-") as directory:
         wait_for("AI CHAT")
         click("Stop chat")
         grid = wait_for("Chat stopped")
-        pathlib.Path('/tmp/vide-ai-compact.txt').write_text(grid)
+        pathlib.Path('/tmp/tuim-ai-compact.txt').write_text(grid)
         assert "Send selection" not in grid, grid
         assert "Send file" not in grid, grid
         assert "Review changes" not in grid, grid

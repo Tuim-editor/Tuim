@@ -140,7 +140,7 @@ pub const SettingsConfig = struct {
     // Persistence contract:
     // - v0 (unversioned) and v1 are the support window; future schemas are
     //   read-refused and therefore remain byte-for-byte available for a newer
-    //   Vide. Downgrade is an explicit export/save from that newer release.
+    //   Tuim. Downgrade is an explicit export/save from that newer release.
     // - Unknown fields in a supported document are accepted for forward
     //   reading, but only future-version documents promise lossless retention.
     // - Saves are atomic, process-local last-writer-wins transactions. There is
@@ -570,13 +570,13 @@ pub const SettingsWidget = struct {
         std.Io.Dir.cwd().deleteFile(self.io, progress_path) catch {};
         try std.Io.Dir.cwd().writeFile(self.io, .{ .sub_path = script_path, .data = software_updater });
 
-        // The outer shell exits immediately after detaching the updater. Vide
+        // The outer shell exits immediately after detaching the updater. Tuim
         // remains responsive and the updater can finish if the app is closed.
         const argv = &[_][]const u8{
             "sh",
             "-c",
             "sh \"$1\" \"$2\" \"$3\" \"$4\" >/dev/null 2>&1 &",
-            "vide-software-update",
+            "tuim-software-update",
             script_path,
             status_path,
             log_path,
@@ -657,8 +657,8 @@ pub const SettingsWidget = struct {
         }
         self.themes.clearRetainingCapacity();
 
-        var vide_list = std.array_list.Managed([]const u8).init(self.allocator);
-        defer vide_list.deinit();
+        var tuim_list = std.array_list.Managed([]const u8).init(self.allocator);
+        defer tuim_list.deinit();
         var vim_list = std.array_list.Managed([]const u8).init(self.allocator);
         defer vim_list.deinit();
         var user_list = std.array_list.Managed([]const u8).init(self.allocator);
@@ -668,15 +668,15 @@ pub const SettingsWidget = struct {
 
         for (raw_list) |t| {
             if (std.mem.eql(u8, t, "system")) continue;
-            var is_vide = false;
+            var is_tuim = false;
             for (supported_themes) |st| {
                 if (std.mem.eql(u8, t, st)) {
-                    is_vide = true;
+                    is_tuim = true;
                     break;
                 }
             }
-            if (is_vide) {
-                try vide_list.append(t);
+            if (is_tuim) {
+                try tuim_list.append(t);
                 continue;
             }
 
@@ -696,10 +696,10 @@ pub const SettingsWidget = struct {
         }
 
         // System is built in, so it remains available without theme plugins.
-        try self.themes.append(try self.allocator.dupe(u8, "--- Vide Themes ---"));
+        try self.themes.append(try self.allocator.dupe(u8, "--- Tuim Themes ---"));
         try self.themes.append(try self.allocator.dupe(u8, "system"));
-        if (vide_list.items.len > 0) {
-            for (vide_list.items) |t| {
+        if (tuim_list.items.len > 0) {
+            for (tuim_list.items) |t| {
                 try self.themes.append(try self.allocator.dupe(u8, t));
             }
         }
@@ -857,7 +857,7 @@ pub const SettingsWidget = struct {
         const h = modal.rect.h;
 
         if (!primitives.usable(modal, 50, 18)) {
-            primitives.drawSizeWarning(ren, "Vide Settings", theme.fg_primary, theme.bg_sidebar);
+            primitives.drawSizeWarning(ren, "Tuim Settings", theme.fg_primary, theme.bg_sidebar);
             return;
         }
 
@@ -865,7 +865,7 @@ pub const SettingsWidget = struct {
 
         // Title
         var settings_title_buf: [64]u8 = undefined;
-        const title = std.fmt.bufPrint(&settings_title_buf, " Vide Settings v{s} ", .{build_options.version}) catch " Vide Settings ";
+        const title = std.fmt.bufPrint(&settings_title_buf, " Tuim Settings v{s} ", .{build_options.version}) catch " Tuim Settings ";
         ren.drawText(x + 2, y, title, theme.fg_accent, theme.bg_sidebar, true, false);
 
         const pointer = ren.pointer_position;
@@ -1007,7 +1007,7 @@ pub const SettingsWidget = struct {
 
                 ren.drawControlText(content_x, content_y + 6, " [ Installed Plugins... ] ", theme.bg_sidebar, theme.fg_accent, true, false);
                 ren.drawText(content_x, content_y + 9, "Configure, enable, disable, or uninstall.", theme.fg_secondary, theme.bg_sidebar, false, false);
-                ren.drawText(content_x, content_y + 11, "Changes apply after restarting Vide.", theme.fg_secondary, theme.bg_sidebar, false, false);
+                ren.drawText(content_x, content_y + 11, "Changes apply after restarting Tuim.", theme.fg_secondary, theme.bg_sidebar, false, false);
             },
             4 => {
                 ren.drawText(content_x, content_y, "Keybindings / Enter or click to record", theme.fg_primary, theme.bg_sidebar, true, false);
@@ -1044,18 +1044,18 @@ pub const SettingsWidget = struct {
                 ren.drawText(content_x, content_y + 14, "Presets replace bindings; Ctrl+S saves", theme.fg_secondary, theme.bg_sidebar, false, false);
             },
             5 => {
-                ren.drawText(content_x, content_y, "About Vide", theme.fg_primary, theme.bg_sidebar, true, false);
+                ren.drawText(content_x, content_y, "About Tuim", theme.fg_primary, theme.bg_sidebar, true, false);
 
-                const vide_line = std.fmt.bufPrint(&buf, "Vide version: {s}", .{build_options.version}) catch "Vide version: unknown";
-                ren.drawText(content_x, content_y + 2, vide_line, theme.fg_primary, theme.bg_sidebar, false, false);
+                const tuim_line = std.fmt.bufPrint(&buf, "Tuim version: {s}", .{build_options.version}) catch "Tuim version: unknown";
+                ren.drawText(content_x, content_y + 2, tuim_line, theme.fg_primary, theme.bg_sidebar, false, false);
                 const nvim_version = if (self.nvim_version_len > 0) self.nvim_version[0..self.nvim_version_len] else "unknown";
                 const nvim_line = std.fmt.bufPrint(&buf, "Neovim version: {s}", .{nvim_version}) catch "Neovim version: unknown";
                 ren.drawText(content_x, content_y + 4, nvim_line, theme.fg_primary, theme.bg_sidebar, false, false);
 
                 const update_label = switch (self.software_update_status) {
                     .idle => "Update to Latest Version",
-                    .running => "Updating Vide...",
-                    .success => "Updated - Restart Vide",
+                    .running => "Updating Tuim...",
+                    .success => "Updated - Restart Tuim",
                     .failure => "Update Failed - Retry",
                 };
                 const update_state: primitives.ControlState = if (self.software_update_status == .running)
@@ -1088,7 +1088,7 @@ pub const SettingsWidget = struct {
                     ren.drawTextClipped(content_x + 10, content_y + 12, available, self.data_dir, theme.fg_primary, theme.bg_sidebar, false, false);
                     ren.drawText(content_x, content_y + 14, "Settings:", theme.fg_secondary, theme.bg_sidebar, false, false);
                     ren.drawTextClipped(content_x + 10, content_y + 14, available, self.settings_path, theme.fg_primary, theme.bg_sidebar, false, false);
-                    const log_path = std.fmt.bufPrint(&buf, "{s}/vide.log", .{self.data_dir}) catch self.data_dir;
+                    const log_path = std.fmt.bufPrint(&buf, "{s}/tuim.log", .{self.data_dir}) catch self.data_dir;
                     ren.drawText(content_x, content_y + 16, "Log:", theme.fg_secondary, theme.bg_sidebar, false, false);
                     ren.drawTextClipped(content_x + 10, content_y + 16, available, log_path, theme.fg_primary, theme.bg_sidebar, false, false);
                     break :a;
@@ -2114,15 +2114,15 @@ test "atomic save failure leaves old or new valid primary and cleans temporaries
 }
 
 test "software updater uses the official release installer" {
-    try std.testing.expect(std.mem.indexOf(u8, SettingsWidget.software_updater, "https://raw.githubusercontent.com/Rouboufy/vide/main/setup.sh") != null);
+    try std.testing.expect(std.mem.indexOf(u8, SettingsWidget.software_updater, "https://raw.githubusercontent.com/Rouboufy/tuim/main/setup.sh") != null);
     try std.testing.expect(std.mem.indexOf(u8, SettingsWidget.software_updater, "--no-plugins") != null);
     try std.testing.expect(std.mem.indexOf(u8, SettingsWidget.software_updater, "${APPIMAGE:-}") != null);
-    try std.testing.expect(std.mem.indexOf(u8, SettingsWidget.software_updater, "Vide-linux-x86_64.AppImage") != null);
+    try std.testing.expect(std.mem.indexOf(u8, SettingsWidget.software_updater, "Tuim-linux-x86_64.AppImage") != null);
     try std.testing.expect(std.mem.indexOf(u8, SettingsWidget.software_updater, "SHA256SUMS") != null);
     try std.testing.expect(std.mem.indexOf(u8, SettingsWidget.software_updater, "success") != null);
     try std.testing.expect(std.mem.indexOf(u8, SettingsWidget.software_updater, "failure") != null);
     try std.testing.expect(std.mem.indexOf(u8, SettingsWidget.software_updater, "progress_file") != null);
-    try std.testing.expect(std.mem.indexOf(u8, SettingsWidget.software_updater, "VIDE_UPDATE_PROGRESS_FILE") != null);
+    try std.testing.expect(std.mem.indexOf(u8, SettingsWidget.software_updater, "TUIM_UPDATE_PROGRESS_FILE") != null);
 }
 
 test "software updater polls and clamps atomic progress state" {
@@ -2149,7 +2149,7 @@ test "software updater polls and clamps atomic progress state" {
 }
 
 test "system theme stays available once when installed themes refresh" {
-    var widget = SettingsWidget.init(std.testing.allocator, "/tmp/vide-no-system-theme-settings.json", std.testing.io, "/tmp");
+    var widget = SettingsWidget.init(std.testing.allocator, "/tmp/tuim-no-system-theme-settings.json", std.testing.io, "/tmp");
     defer widget.deinit();
     try widget.setThemesAndGroup(&.{ "default", "system", "custom" });
     try std.testing.expectEqualStrings("system", widget.themes.items[1]);
@@ -2164,7 +2164,7 @@ test "system theme stays available once when installed themes refresh" {
 
 test "theme dropdown mouse scrolling keeps the highlight visible" {
     const themes = [_][]const u8{
-        "--- Vide Themes ---",
+        "--- Tuim Themes ---",
         "vscode",
         "kanagawa",
         "nord",

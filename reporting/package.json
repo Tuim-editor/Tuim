@@ -1,5 +1,5 @@
 {
-  "name": "vide-bug-report-gateway",
+  "name": "tuim-bug-report-gateway",
   "private": true,
   "type": "module",
   "scripts": {

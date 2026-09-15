@@ -6,10 +6,10 @@ import subprocess
 import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix="vide-ai-") as directory:
+with tempfile.TemporaryDirectory(prefix="tuim-ai-") as directory:
     base = pathlib.Path(directory)
     env = os.environ.copy()
-    env.update(VIDE_DISABLE_PLUGINS="1", VIDE_SKIP_ONBOARDING="1", NVIM_APPNAME="vide")
+    env.update(TUIM_DISABLE_PLUGINS="1", TUIM_SKIP_ONBOARDING="1", NVIM_APPNAME="tuim")
     for name in ("config", "data", "state", "cache", "bin"):
         (base / name).mkdir()
         if name != "bin":

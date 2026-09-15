@@ -144,7 +144,7 @@ test "zen mode reserves only the mode indicator row" {
     try std.testing.expect(layout.panel == null);
 }
 
-test "normal layouts reserve Vide chrome" {
+test "normal layouts reserve Tuim chrome" {
     const layout = Layout.compute(120, 40, false, true, 30, null);
     try std.testing.expectEqual(@as(u16, 5), layout.activity_bar.w);
     try std.testing.expectEqual(@as(u16, 30), layout.file_tree.w);

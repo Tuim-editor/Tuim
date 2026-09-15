@@ -58,7 +58,7 @@ pub fn handleNotification(ctx: ?*anyopaque, method: []const u8, params: Value) a
             app.invalidations.damage(if (ui_state == app.ui_state) .editor else .drawer);
         }
         if (damage.cursor) app.invalidations.cursor = true;
-    } else if (std.mem.eql(u8, method, "vide_buffers") and ui_state == app.ui_state and params == .array and params.array.len >= 2 and params.array[0] == .array) {
+    } else if (std.mem.eql(u8, method, "tuim_buffers") and ui_state == app.ui_state and params == .array and params.array.len >= 2 and params.array[0] == .array) {
         for (app.tabs.items) |tab| {
             app.allocator.free(tab.name);
             if (tab.path) |path| app.allocator.free(path);
@@ -96,7 +96,7 @@ pub fn handleNotification(ctx: ?*anyopaque, method: []const u8, params: Value) a
         }
         if (app.tabs.items.len == 0) app.active_tab = 0;
         app.invalidations.damageAll();
-    } else if (std.mem.eql(u8, method, "vide_telescope_rect")) {
+    } else if (std.mem.eql(u8, method, "tuim_telescope_rect")) {
         ui_state.native_picker_chrome = params == .array and params.array.len >= 4 and params.array[3] == .bool and params.array[3].bool;
         app.invalidations.damage(.overlay);
         app.invalidations.damage(.chrome);
@@ -127,7 +127,7 @@ pub fn handleNotification(ctx: ?*anyopaque, method: []const u8, params: Value) a
             ui_state.telescope_rects[1] = null;
             ui_state.widget_title_len = 0;
         }
-    } else if (std.mem.eql(u8, method, "vide_open_commands")) {
+    } else if (std.mem.eql(u8, method, "tuim_open_commands")) {
         app.workspace.palette = true;
         app.workspace.buffer_picker = false;
         app.workspace.editing_shortcut = null;
@@ -136,7 +136,7 @@ pub fn handleNotification(ctx: ?*anyopaque, method: []const u8, params: Value) a
         app.workspace.command_selected = 0;
         app.workspace.command_scroll = 0;
         app.invalidations.damageAll();
-    } else if (std.mem.eql(u8, method, "vide_open_language_tools")) {
+    } else if (std.mem.eql(u8, method, "tuim_open_language_tools")) {
         app.settings_widget.is_open = false;
         app.mason_widget.is_open = true;
         app.mason_widget.selected_tab = .lsp;
@@ -146,11 +146,11 @@ pub fn handleNotification(ctx: ?*anyopaque, method: []const u8, params: Value) a
         app.mason_widget.scroll_offset = 0;
         app.mason_widget.refresh(app.rpc);
         app.invalidations.damageAll();
-    } else if (std.mem.eql(u8, method, "vide_toggle_zen")) {
+    } else if (std.mem.eql(u8, method, "tuim_toggle_zen")) {
         ui_state.toggle_zen_requested = true;
-    } else if (std.mem.eql(u8, method, "vide_toggle_ide")) {
+    } else if (std.mem.eql(u8, method, "tuim_toggle_ide")) {
         ui_state.toggle_ide_requested = true;
-    } else if (std.mem.eql(u8, method, "vide_notice") and params == .array and params.array.len >= 2 and
+    } else if (std.mem.eql(u8, method, "tuim_notice") and params == .array and params.array.len >= 2 and
         params.array[0] == .string and params.array[1] == .string)
     {
         const level: @import("../tui/app.zig").NoticeLevel = if (std.mem.eql(u8, params.array[0].string, "error"))
@@ -161,13 +161,13 @@ pub fn handleNotification(ctx: ?*anyopaque, method: []const u8, params: Value) a
             .info;
         app.notify(level, "{s}", .{params.array[1].string});
         std.log.info("Neovim notice [{s}]: {s}", .{ params.array[0].string, params.array[1].string });
-    } else if (std.mem.eql(u8, method, "vide_ai_status") and params == .array and params.array.len >= 2 and
+    } else if (std.mem.eql(u8, method, "tuim_ai_status") and params == .array and params.array.len >= 2 and
         params.array[0] == .string and params.array[1] == .string)
     {
         const active = params.array.len < 3 or params.array[2] != .bool or params.array[2].bool;
         app.ai_panel.updateSession(params.array[0].string, params.array[1].string, active);
         app.invalidations.damageAll();
-    } else if (std.mem.eql(u8, method, "vide_settings_changed")) {
+    } else if (std.mem.eql(u8, method, "tuim_settings_changed")) {
         var old_cfg = app.settings_widget.config;
         if (settings.SettingsConfig.load(app.settings_widget.allocator, app.settings_widget.settings_path)) |new_cfg| {
             app.settings_widget.config = new_cfg;
@@ -193,12 +193,12 @@ pub fn handleNotification(ctx: ?*anyopaque, method: []const u8, params: Value) a
             std.log.err("Settings reload failed: {}", .{err});
         }
         app.invalidations.damageAll();
-    } else if (std.mem.eql(u8, method, "vide_win_count") and params == .array and params.array.len > 0) {
+    } else if (std.mem.eql(u8, method, "tuim_win_count") and params == .array and params.array.len > 0) {
         if (params.array[0] == .integer) {
             app.editor_win_count = @as(usize, @intCast(@max(1, params.array[0].integer)));
             app.invalidations.damageAll();
         }
-    } else if (std.mem.eql(u8, method, "vide_win_positions") and params == .array and params.array.len > 0) {
+    } else if (std.mem.eql(u8, method, "tuim_win_positions") and params == .array and params.array.len > 0) {
         const wins = if (ui_state == app.ui_state) &app.editor_wins else &app.terminal_wins;
         // Free old name strings before clearing
         for (wins.items) |old_win| {
@@ -243,7 +243,7 @@ pub fn handleNotification(ctx: ?*anyopaque, method: []const u8, params: Value) a
         }
 
         app.invalidations.damageAll();
-    } else if (std.mem.eql(u8, method, "vide_boundary_hit") and params == .array and params.array.len > 0) {
+    } else if (std.mem.eql(u8, method, "tuim_boundary_hit") and params == .array and params.array.len > 0) {
         if (params.array[0] == .string) {
             const dir = params.array[0].string;
             if (std.mem.eql(u8, dir, "j")) {
@@ -263,7 +263,7 @@ pub fn handleNotification(ctx: ?*anyopaque, method: []const u8, params: Value) a
                 }
             }
         }
-    } else if (std.mem.eql(u8, method, "vide_theme_changed") and params == .array and params.array.len > 0) {
+    } else if (std.mem.eql(u8, method, "tuim_theme_changed") and params == .array and params.array.len > 0) {
         if (params.array[0] == .map) {
             ui_state.theme_changed = true;
             // update theme directly using app.active_theme

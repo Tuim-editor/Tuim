@@ -22,11 +22,11 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 progress 2
-tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/vide-software-update.XXXXXX") || exit 1
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/tuim-software-update.XXXXXX") || exit 1
 
 if [ -n "${APPIMAGE:-}" ] && [ -f "$APPIMAGE" ]; then
-    asset=Vide-linux-x86_64.AppImage
-    release=https://github.com/Rouboufy/vide/releases/latest/download
+    asset=Tuim-linux-x86_64.AppImage
+    release=https://github.com/Rouboufy/tuim/releases/latest/download
     progress 10
     if curl -fsSL --retry 3 -o "$tmp_dir/$asset" "$release/$asset"; then
         progress 65
@@ -45,9 +45,9 @@ if [ -n "${APPIMAGE:-}" ] && [ -f "$APPIMAGE" ]; then
     fi
 else
     progress 10
-    if curl -fsSL --retry 3 -o "$tmp_dir/setup.sh" "https://raw.githubusercontent.com/Rouboufy/vide/main/setup.sh"; then
+    if curl -fsSL --retry 3 -o "$tmp_dir/setup.sh" "https://raw.githubusercontent.com/Rouboufy/tuim/main/setup.sh"; then
         progress 20
-        if VIDE_UPDATE_PROGRESS_FILE="$progress_file" bash "$tmp_dir/setup.sh" --no-plugins; then
+        if TUIM_UPDATE_PROGRESS_FILE="$progress_file" bash "$tmp_dir/setup.sh" --no-plugins; then
             result=success
         fi
     fi

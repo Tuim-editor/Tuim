@@ -1,4 +1,4 @@
-vim.g.vide_is_terminal = true
+vim.g.tuim_is_terminal = true
 vim.opt.termguicolors = true
 vim.opt.laststatus = 0
 vim.opt.showmode = false
@@ -11,7 +11,7 @@ vim.opt.signcolumn = 'no'
 vim.opt.foldcolumn = '0'
 vim.opt.fillchars:append({ eob = ' ' })
 
-function _G.vide_ensure_terminal()
+function _G.tuim_ensure_terminal()
     local buf = vim.api.nvim_get_current_buf()
     local job = vim.bo[buf].buftype == 'terminal' and vim.b[buf].terminal_job_id or nil
     if not job or vim.fn.jobwait({ job }, 0)[1] ~= -1 then
@@ -47,13 +47,13 @@ local function notify_win_positions()
             end
         end
     end
-    vim.rpcnotify(1, "vide_win_positions", windows)
+    vim.rpcnotify(1, "tuim_win_positions", windows)
 end
 
 vim.api.nvim_create_autocmd({ "WinNew", "WinClosed", "WinEnter", "WinLeave", "TermOpen" }, {
-    group = vim.api.nvim_create_augroup("VideTerminalFrontend", { clear = true }),
+    group = vim.api.nvim_create_augroup("TuimTerminalFrontend", { clear = true }),
     callback = function() vim.schedule(notify_win_positions) end,
 })
--- Let the synchronous nvim_exec_lua setup response reach Vide before sending
+-- Let the synchronous nvim_exec_lua setup response reach Tuim before sending
 -- notifications that are consumed by the main event loop.
 vim.defer_fn(notify_win_positions, 10)

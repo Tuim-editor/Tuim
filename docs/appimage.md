@@ -1,13 +1,13 @@
 # AppImage packaging and verification
 
-Vide's x86-64 AppImage contains Vide, Neovim 0.12.4, Neovim's runtime,
+Tuim's x86-64 AppImage contains Tuim, Neovim 0.12.4, Neovim's runtime,
 desktop metadata, an SVG icon, and AppStream metadata. It does not require host
-Neovim. User data still uses Vide's isolated XDG directories outside the
+Neovim. User data still uses Tuim's isolated XDG directories outside the
 read-only image.
 
-Tagged releases publish `Vide-<version>-x86_64.AppImage`, its neighboring
-`.sha256`, the stable updater asset `Vide-linux-x86_64.AppImage`, and the
-release-wide `SHA256SUMS`. `VERSION.txt` records the Vide version, Git commit,
+Tagged releases publish `Tuim-<version>-x86_64.AppImage`, its neighboring
+`.sha256`, the stable updater asset `Tuim-linux-x86_64.AppImage`, and the
+release-wide `SHA256SUMS`. `VERSION.txt` records the Tuim version, Git commit,
 architecture, and bundled Neovim version.
 
 The About panel's update button detects the AppImage runtime through
@@ -19,9 +19,9 @@ Native installations continue to update through `setup.sh`.
 
 ```bash
 VERSION=1.2.3 COMMIT_SHA=$(git rev-parse HEAD) bash build_appimage.sh
-sha256sum -c Vide-1.2.3-x86_64.AppImage.sha256
-./Vide-1.2.3-x86_64.AppImage --appimage-extract-and-run --version
-tests/appimage_smoke.sh Vide.AppDir
+sha256sum -c Tuim-1.2.3-x86_64.AppImage.sha256
+./Tuim-1.2.3-x86_64.AppImage --appimage-extract-and-run --version
+tests/appimage_smoke.sh Tuim.AppDir
 ```
 
 The extraction flag works without FUSE. The smoke test checks bundled assets,

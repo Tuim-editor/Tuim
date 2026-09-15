@@ -1,4 +1,4 @@
-name = "vide-bug-report"
+name = "tuim-bug-report"
 main = "src/index.ts"
 compatibility_date = "2026-07-15"
 workers_dev = true
@@ -6,7 +6,7 @@ preview_urls = false
 
 [vars]
 GITHUB_OWNER = "Rouboufy"
-GITHUB_REPO = "vide"
+GITHUB_REPO = "tuim"
 
 [[kv_namespaces]]
 binding = "REPORT_LIMITS"

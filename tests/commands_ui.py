@@ -12,11 +12,11 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 def run(capture=None):
-    with tempfile.TemporaryDirectory(prefix="vide-workspace-test-") as directory:
+    with tempfile.TemporaryDirectory(prefix="tuim-workspace-test-") as directory:
         base = pathlib.Path(directory)
-        for name in ("config", "data/vide", "state", "cache"):
+        for name in ("config", "data/tuim", "state", "cache"):
             (base / name).mkdir(parents=True, exist_ok=True)
-        (base / "data/vide/settings.json").write_text('{"mode":"normal","nerd_fonts":false}')
+        (base / "data/tuim/settings.json").write_text('{"mode":"normal","nerd_fonts":false}')
         sample = base / "sample.zig"
         sample.write_text('const answer: u32 = 42;\n')
         socket = str(base / "tmux.sock")
@@ -57,13 +57,13 @@ def run(capture=None):
             "XDG_DATA_HOME": str(base / "data"),
             "XDG_STATE_HOME": str(base / "state"),
             "XDG_CACHE_HOME": str(base / "cache"),
-            "VIDE_DISABLE_PLUGINS": "1",
-            "VIDE_SKIP_ONBOARDING": "1",
+            "TUIM_DISABLE_PLUGINS": "1",
+            "TUIM_SKIP_ONBOARDING": "1",
             "TERM": "xterm-256color",
         }
-        command = shlex.join(["env", *(f"{k}={v}" for k, v in env.items()), str(ROOT / "zig-out/bin/vide"), str(sample)])
+        command = shlex.join(["env", *(f"{k}={v}" for k, v in env.items()), str(ROOT / "zig-out/bin/tuim"), str(sample)])
         def settings():
-            return json.loads((base / "data/vide/settings.json").read_text()).get("keybindings", {})
+            return json.loads((base / "data/tuim/settings.json").read_text()).get("keybindings", {})
 
         def search(query):
             send("F1")

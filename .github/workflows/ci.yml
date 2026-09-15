@@ -35,12 +35,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y tmux
-          mkdir -p "$HOME/.local/share/vide/lazy"
-          git clone --depth 1 --branch stable https://github.com/folke/lazy.nvim.git "$HOME/.local/share/vide/lazy/lazy.nvim"
+          mkdir -p "$HOME/.local/share/tuim/lazy"
+          git clone --depth 1 --branch stable https://github.com/folke/lazy.nvim.git "$HOME/.local/share/tuim/lazy/lazy.nvim"
           python3 tests/plugin_manager.py
           python3 tests/plugins_ui.py
       - name: Check shell scripts
-        run: shellcheck setup.sh update.sh uninstall.sh build_appimage.sh src/software_update.sh packaging/vide-launcher scripts/plugin_smoke.sh scripts/capture_media.sh tests/setup_plans.sh tests/launcher_smoke.sh tests/ide_mode.sh tests/onboarding.sh tests/appimage_smoke.sh tests/media_assets.sh tests/terminal_compat.sh
+        run: shellcheck setup.sh update.sh uninstall.sh build_appimage.sh src/software_update.sh packaging/tuim-launcher scripts/plugin_smoke.sh scripts/capture_media.sh tests/setup_plans.sh tests/launcher_smoke.sh tests/ide_mode.sh tests/onboarding.sh tests/appimage_smoke.sh tests/media_assets.sh tests/terminal_compat.sh
       - name: Validate generated media
         run: tests/media_assets.sh
       - name: Validate static website
@@ -101,7 +101,7 @@ jobs:
       - name: Test terminal compatibility on macOS
         timeout-minutes: 5
         env:
-          VIDE_TEST_SKIP_STARTUP_FAILURE: "1"
+          TUIM_TEST_SKIP_STARTUP_FAILURE: "1"
         run: |
           set -o pipefail
           tests/terminal_compat.sh host 2>&1 | tee -a "$RUNNER_TEMP/macos-smoke.log"

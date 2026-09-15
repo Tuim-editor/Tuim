@@ -1,5 +1,5 @@
     │ EXPLORER             +F +D  │  [No Name]    x   [No Name]    x  +                                       |     -
-▋ E │ > cache                     │1   Welcome to Vide — mo Warning: Plugins are disabled for this recovery session.
+▋ E │ > cache                     │1   Welcome to Tuim — mo Warning: Plugins are disabled for this recovery session.
     │ > config                    │~
     │ > data                      │~
   S │ > state                     │~

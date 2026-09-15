@@ -8,7 +8,7 @@ import time
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
-with tempfile.TemporaryDirectory(prefix="vide-onboarding-ui-") as directory:
+with tempfile.TemporaryDirectory(prefix="tuim-onboarding-ui-") as directory:
     base = pathlib.Path(directory)
     socket = str(base / "tmux.sock")
 
@@ -29,9 +29,9 @@ with tempfile.TemporaryDirectory(prefix="vide-onboarding-ui-") as directory:
 
     env = {f"XDG_{name}_HOME": str(base / name.lower())
            for name in ("CONFIG", "DATA", "STATE", "CACHE")}
-    env.update(VIDE_DISABLE_PLUGINS="1", VIDE_SKIP_ONBOARDING="0", TERM="xterm-256color")
+    env.update(TUIM_DISABLE_PLUGINS="1", TUIM_SKIP_ONBOARDING="0", TERM="xterm-256color")
     command = shlex.join(["env", *(f"{k}={v}" for k, v in env.items()),
-                          str(ROOT / "zig-out/bin/vide")])
+                          str(ROOT / "zig-out/bin/tuim")])
     try:
         tmux("new-session", "-d", "-s", "ui", "-x", "110", "-y", "36", command)
         grid = wait_for(lambda s: "Click to close guide" in s, "Guide did not open")
@@ -40,8 +40,8 @@ with tempfile.TemporaryDirectory(prefix="vide-onboarding-ui-") as directory:
         col = line.index("Click to close guide") + 3
         tmux("send-keys", "-l", "-t", "ui", f"\x1b[<0;{col + 1};{row + 1}M\x1b[<0;{col + 1};{row + 1}m")
         wait_for(lambda s: "Click to close guide" not in s, "Click did not close guide")
-        assert (base / "data/vide/onboarding-complete").exists()
-        tmux("send-keys", "-l", "-t", "ui", ":VideOnboarding")
+        assert (base / "data/tuim/onboarding-complete").exists()
+        tmux("send-keys", "-l", "-t", "ui", ":TuimOnboarding")
         tmux("send-keys", "-t", "ui", "Enter")
         wait_for(lambda s: "Click to close guide" in s, "Guide did not reopen")
         tmux("send-keys", "-t", "ui", "l")

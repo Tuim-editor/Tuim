@@ -18,16 +18,16 @@ spec.loader.exec_module(store)
 
 class PluginManagerTests(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix="vide-plugins-")
+        self.temp = tempfile.TemporaryDirectory(prefix="tuim-plugins-")
         self.base = pathlib.Path(self.temp.name)
-        store.VIDE_DIR = self.base / "data/vide"
-        store.DB_PATH = store.VIDE_DIR / "store_db.json"
-        store.USER_PLUGINS_PATH = store.VIDE_DIR / "user_plugins.json"
-        store.STATE_PATH = store.VIDE_DIR / "plugin_states.json"
-        store.INVENTORY_PATH = store.VIDE_DIR / "plugin_inventory.json"
-        self.env = dict(os.environ, NVIM_APPNAME="vide", XDG_DATA_HOME=str(self.base / "data"),
+        store.TUIM_DIR = self.base / "data/tuim"
+        store.DB_PATH = store.TUIM_DIR / "store_db.json"
+        store.USER_PLUGINS_PATH = store.TUIM_DIR / "user_plugins.json"
+        store.STATE_PATH = store.TUIM_DIR / "plugin_states.json"
+        store.INVENTORY_PATH = store.TUIM_DIR / "plugin_inventory.json"
+        self.env = dict(os.environ, NVIM_APPNAME="tuim", XDG_DATA_HOME=str(self.base / "data"),
                         XDG_CONFIG_HOME=str(self.base / "config"), XDG_STATE_HOME=str(self.base / "state"),
-                        XDG_CACHE_HOME=str(self.base / "cache"), VIDE_DISABLE_PLUGINS="1", VIDE_SKIP_ONBOARDING="1")
+                        XDG_CACHE_HOME=str(self.base / "cache"), TUIM_DISABLE_PLUGINS="1", TUIM_SKIP_ONBOARDING="1")
 
     def tearDown(self):
         self.temp.cleanup()
@@ -35,18 +35,18 @@ class PluginManagerTests(unittest.TestCase):
     def fixture(self, entries):
         store.write_json(store.INVENTORY_PATH, entries)
         for entry in entries:
-            (store.VIDE_DIR / "lazy" / entry["name"]).mkdir(parents=True, exist_ok=True)
+            (store.TUIM_DIR / "lazy" / entry["name"]).mkdir(parents=True, exist_ok=True)
 
     def nvim(self, lua):
         script = self.base / "check.lua"
         script.write_text(lua + '\nvim.cmd("qa!")\n')
-        result = subprocess.run(["nvim", "--headless", "--clean", "-u", str(ROOT / "src/nvim/vide_init.lua"),
+        result = subprocess.run(["nvim", "--headless", "--clean", "-u", str(ROOT / "src/nvim/tuim_init.lua"),
                                  "-l", str(script)], env=self.env, capture_output=True, text=True, timeout=25)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_offline_complete_inventory(self):
         self.fixture([dict(name=f"plugin-{i}", full_name=f"owner/plugin-{i}", source="Bundled") for i in range(65)])
-        (store.VIDE_DIR / "lazy/local-only").mkdir()
+        (store.TUIM_DIR / "lazy/local-only").mkdir()
         with patch.object(store, "download_db", side_effect=AssertionError("Network used")):
             results = store.search("", "installed")
         self.assertEqual(len(results), 66)
@@ -55,12 +55,12 @@ class PluginManagerTests(unittest.TestCase):
 
     def test_lifecycle_preserves_config_and_disabled_files(self):
         self.fixture([dict(name="demo", full_name="owner/demo", enabled=True)])
-        config = store.VIDE_DIR / "plugin_configs/owner_demo.lua"
+        config = store.TUIM_DIR / "plugin_configs/owner_demo.lua"
         config.parent.mkdir()
         config.write_text("return {opts = {answer = 42}}")
         store.change_plugin("disable", "owner/demo")
         self.assertFalse(store.inventory()["owner/demo"]["enabled"])
-        self.assertTrue((store.VIDE_DIR / "lazy/demo").exists())
+        self.assertTrue((store.TUIM_DIR / "lazy/demo").exists())
         store.change_plugin("enable", "owner/demo")
         store.change_plugin("remove", "owner/demo")
         self.assertEqual(store.inventory()["owner/demo"]["status"], "Removal pending restart")
@@ -81,7 +81,7 @@ class PluginManagerTests(unittest.TestCase):
             store.change_plugin("disable", "folke/lazy.nvim")
 
     def test_corrupt_state_not_overwritten_and_cli_fails(self):
-        store.VIDE_DIR.mkdir(parents=True)
+        store.TUIM_DIR.mkdir(parents=True)
         store.STATE_PATH.write_text("broken json")
         result = subprocess.run(["python3", str(ROOT / "src/nvim/store_search.py"), "add", "owner/demo"],
                                 env=self.env, capture_output=True, text=True)
@@ -98,14 +98,14 @@ class PluginManagerTests(unittest.TestCase):
     def test_startup_overrides_and_persistent_state(self):
         store.write_json(store.USER_PLUGINS_PATH, ["owner/demo", "owner/broken"])
         store.write_json(store.STATE_PATH, {"folke/tokyonight.nvim": "disabled", "shaunsingh/nord.nvim": "removed"})
-        configs = store.VIDE_DIR / "plugin_configs"
+        configs = store.TUIM_DIR / "plugin_configs"
         configs.mkdir()
         (configs / "owner_demo.lua").write_text('return {opts={answer=42}, config=function(_, opts) vim.g.plugin_answer=opts.answer end}')
         (configs / "owner_broken.lua").write_text('return invalid lua!')
         (configs / "folke_tokyonight.nvim.lua").write_text('error("Disabled config must not execute")')
         self.nvim('''
 local specs = {}
-for _, p in ipairs(_G.vide_plugin_specs) do specs[p[1]] = p end
+for _, p in ipairs(_G.tuim_plugin_specs) do specs[p[1]] = p end
 assert(specs["folke/tokyonight.nvim"].cond == false)
 assert(specs["shaunsingh/nord.nvim"].enabled == false)
 assert(specs["owner/demo"].opts == nil, "Recovery executed user configuration")
@@ -118,28 +118,28 @@ assert(specs["owner/broken"] ~= nil, "Bad config broke startup")
         self.assertFalse(next(p for p in entries if p["full_name"] == "folke/tokyonight.nvim")["enabled"])
 
     def test_real_lazy_load_disable_and_targeted_uninstall(self):
-        lazy = pathlib.Path.home() / ".local/share/vide/lazy/lazy.nvim"
+        lazy = pathlib.Path.home() / ".local/share/tuim/lazy/lazy.nvim"
         if not lazy.is_dir():
             self.skipTest("Requires a locally installed lazy.nvim")
-        self.nvim("assert(_G.vide_plugin_specs)")
+        self.nvim("assert(_G.tuim_plugin_specs)")
         states = {p["full_name"]: "removed" for p in store.read_json(store.INVENTORY_PATH, []) if p["full_name"] != "folke/lazy.nvim"}
         states.update({"owner/old": "removed", "owner/sleeping": "disabled"})
         store.write_json(store.STATE_PATH, states)
         store.write_json(store.USER_PLUGINS_PATH, ["owner/live", "owner/old", "owner/sleeping", "owner/broken"])
-        root = store.VIDE_DIR / "lazy"
+        root = store.TUIM_DIR / "lazy"
         root.mkdir(exist_ok=True)
         shutil.copytree(lazy, root / "lazy.nvim")
         for name in ("live", "old", "sleeping", "unrelated", "broken"):
             (root / name).mkdir()
             subprocess.run(["git", "init", "-q", str(root / name)], check=True)
             subprocess.run(["git", "-C", str(root / name), "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "--allow-empty", "-qm", "Fixture"], check=True)
-        configs = store.VIDE_DIR / "plugin_configs"
+        configs = store.TUIM_DIR / "plugin_configs"
         configs.mkdir()
         (configs / "owner_live.lua").write_text('return {lazy=false, opts={answer=73}, config=function(_, opts) vim.g.live_answer=opts.answer end}')
         (configs / "owner_sleeping.lua").write_text('vim.g.disabled_config_ran=true; return {}')
         (configs / "owner_old.lua").write_text('return {}')
         (configs / "owner_broken.lua").write_text('return invalid lua!')
-        self.env.pop("VIDE_DISABLE_PLUGINS")
+        self.env.pop("TUIM_DISABLE_PLUGINS")
         self.nvim('''assert(vim.wait(2000, function() return vim.g.live_answer == 73 end), "Plugin options did not reach setup")
 assert(not vim.g.disabled_config_ran, "Disabled config executed")
 vim.api.nvim_exec_autocmds("VimEnter", {})

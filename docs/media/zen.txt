@@ -1,5 +1,5 @@
 
-                         VIDE
+                         TUIM
 
               Terminal-native editor and IDE
 

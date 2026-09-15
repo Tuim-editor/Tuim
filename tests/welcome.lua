@@ -1,6 +1,6 @@
 vim.rpcnotify = function() end
 vim.fn.mkdir(vim.fn.stdpath('data') .. '/lazy/lazy.nvim', 'p')
-vim.opt.rtp:prepend(assert(vim.env.VIDE_TEST_ALPHA))
+vim.opt.rtp:prepend(assert(vim.env.TUIM_TEST_ALPHA))
 package.preload.lazy = function()
     return { setup = function(specs)
         for _, spec in ipairs(specs) do
@@ -11,10 +11,10 @@ end
 local recent = vim.fn.getcwd() .. '/recent example.txt'
 vim.fn.writefile({'recent file content'}, recent)
 vim.v.oldfiles = {recent, recent, vim.fn.getcwd() .. '/missing.txt'}
-dofile(assert(vim.env.VIDE_TEST_ROOT) .. '/src/nvim/vide_init.lua')
+dofile(assert(vim.env.TUIM_TEST_ROOT) .. '/src/nvim/tuim_init.lua')
 assert(vim.wait(1000, function() return vim.bo.filetype == 'alpha' end))
 local function content() return table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), '\n') end
-assert(content():find('vide /', 1, true))
+assert(content():find('tuim /', 1, true))
 assert(content():find('Ctrl+F', 1, true))
 assert(content():find('Command menu', 1, true))
 assert(content():find('F1', 1, true))
@@ -27,10 +27,10 @@ for _, item in ipairs(dashboard.section.buttons.val) do
 end
 assert(recent_button)
 assert(command_button)
-assert(command_button.opts.keymap[3]:find('vide_open_commands', 1, true))
+assert(command_button.opts.keymap[3]:find('tuim_open_commands', 1, true))
 recent_button.on_press()
 assert(vim.api.nvim_buf_get_name(0) == recent)
-_G.vide_alpha_start()
+_G.tuim_alpha_start()
 vim.o.columns = 36
 vim.api.nvim_exec_autocmds('VimResized', {})
 assert(content():find('New file', 1, true))

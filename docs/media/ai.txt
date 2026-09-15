@@ -1,6 +1,6 @@
     │  EXTENSION SHOP             │  [No Name]    x  +                                                        |     -
   E │                             │                         Warning: Plugins are disabled for this recovery session.
-    │ Select category:            │                         VIDE
+    │ Select category:            │                         TUIM
     │                             │
   S │▋ All Plugins                │              Terminal-native editor and IDE
     │                             │

@@ -12,11 +12,11 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 def run(capture=None, mode="normal"):
-    with tempfile.TemporaryDirectory(prefix="vide-workspace-test-") as directory:
+    with tempfile.TemporaryDirectory(prefix="tuim-workspace-test-") as directory:
         base = pathlib.Path(directory)
-        for name in ("config", "data/vide", "state", "cache"):
+        for name in ("config", "data/tuim", "state", "cache"):
             (base / name).mkdir(parents=True, exist_ok=True)
-        (base / "data/vide/settings.json").write_text(json.dumps({"mode": mode, "nerd_fonts": False}))
+        (base / "data/tuim/settings.json").write_text(json.dumps({"mode": mode, "nerd_fonts": False}))
         sample = base / "sample.zig"
         sample.write_text('const answer: u32 = 42;\n')
         socket = str(base / "tmux.sock")
@@ -57,11 +57,11 @@ def run(capture=None, mode="normal"):
             "XDG_DATA_HOME": str(base / "data"),
             "XDG_STATE_HOME": str(base / "state"),
             "XDG_CACHE_HOME": str(base / "cache"),
-            "VIDE_DISABLE_PLUGINS": "1",
-            "VIDE_SKIP_ONBOARDING": "1",
+            "TUIM_DISABLE_PLUGINS": "1",
+            "TUIM_SKIP_ONBOARDING": "1",
             "TERM": "xterm-256color",
         }
-        command = shlex.join(["env", *(f"{k}={v}" for k, v in env.items()), str(ROOT / "zig-out/bin/vide"), str(sample)])
+        command = shlex.join(["env", *(f"{k}={v}" for k, v in env.items()), str(ROOT / "zig-out/bin/tuim"), str(sample)])
         try:
             tmux("new-session", "-d", "-s", "ui", "-x", "100", "-y", "30", "-c", str(base), command)
             explorer = wait_for(lambda s: "EXPLORER" in s and "sample.zig" in s, "Explorer was not the default view")
@@ -131,25 +131,25 @@ def run(capture=None, mode="normal"):
             wait_for(lambda s: "Next Region" in s and "Save File" in s, "Shortcut editor did not open")
             send("Right")
             send(*(["Down"] * 8), "Enter", "F2", "C-s")
-            wait_for(lambda _: json.loads((base / "data/vide/settings.json").read_text()).get("keybindings", {}).get("focus_next") == "<F2>", "Keyboard-only binding edit/save did not persist")
+            wait_for(lambda _: json.loads((base / "data/tuim/settings.json").read_text()).get("keybindings", {}).get("focus_next") == "<F2>", "Keyboard-only binding edit/save did not persist")
             wait_for(lambda s: "Keybindings / Enter" not in s, "Settings did not close")
             send("F2")
             wait_for(lambda s: "Workspace" in s.splitlines()[-1], "Remapped focus shortcut did not apply")
             palette("keyboard")
             wait_for(lambda s: "Next Region" in s, "Could not reopen keybindings")
             send("Right", "p", "C-s")
-            wait_for(lambda _: json.loads((base / "data/vide/settings.json").read_text()).get("keybindings", {}).get("focus_next") == "<F6>", "Familiar preset did not restore focus binding")
+            wait_for(lambda _: json.loads((base / "data/tuim/settings.json").read_text()).get("keybindings", {}).get("focus_next") == "<F6>", "Familiar preset did not restore focus binding")
 
             palette("terminal")
             wait_for(lambda s: "Terminal" in s.splitlines()[-1], "Terminal did not take focus")
-            text("export VIDE_WORKSPACE_TEST=alive")
+            text("export TUIM_WORKSPACE_TEST=alive")
             send("Enter")
             time.sleep(0.2)
             send("F11")
             wait_for(lambda s: "Return" in s and "WORKSPACE" not in s, "Terminal focus prevented zen")
             send("F11")
             wait_for(lambda s: "Terminal" in s.splitlines()[-1] and "WORKSPACE" in s, "Terminal focus did not restore")
-            text("printf %s \"$VIDE_WORKSPACE_TEST\" > " + shlex.quote(str(base / "terminal-alive")))
+            text("printf %s \"$TUIM_WORKSPACE_TEST\" > " + shlex.quote(str(base / "terminal-alive")))
             send("Enter")
             wait_for(lambda _: (base / "terminal-alive").exists() and (base / "terminal-alive").read_text() == "alive", "Zen restarted or lost the terminal session")
             send("F6")

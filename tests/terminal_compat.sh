@@ -10,8 +10,8 @@ case "$mode" in
   host) python3 tests/pty_integration.py ;;
   tmux)
     command -v tmux >/dev/null 2>&1 || { echo "tmux is required" >&2; exit 77; }
-    socket="vide-smoke-$$"
-    session="vide-smoke"
+    socket="tuim-smoke-$$"
+    session="tuim-smoke"
     cleanup() { tmux -L "$socket" kill-server >/dev/null 2>&1 || true; }
     trap cleanup EXIT INT TERM
     tmux -L "$socket" -f /dev/null new-session -d -s "$session" \
@@ -31,7 +31,7 @@ case "$mode" in
     command -v ssh >/dev/null 2>&1 || { echo "ssh is required" >&2; exit 77; }
     command -v sshd >/dev/null 2>&1 || { echo "sshd is required" >&2; exit 77; }
     sshd_path=$(command -v sshd)
-    temp=$(mktemp -d "${TMPDIR:-/tmp}/vide-ssh-smoke.XXXXXX")
+    temp=$(mktemp -d "${TMPDIR:-/tmp}/tuim-ssh-smoke.XXXXXX")
     cleanup() {
       [ ! -f "$temp/sshd.pid" ] || kill "$(cat "$temp/sshd.pid")" >/dev/null 2>&1 || true
       rm -rf "$temp"

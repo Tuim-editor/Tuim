@@ -4,4 +4,4 @@ set -eu
 HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 export PATH="$HERE/usr/bin:$PATH"
 export VIMRUNTIME="$HERE/usr/share/nvim/runtime"
-exec "$HERE/usr/bin/vide" "$@"
+exec "$HERE/usr/bin/tuim" "$@"

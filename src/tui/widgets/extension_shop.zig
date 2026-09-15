@@ -278,7 +278,7 @@ pub const ExtensionShop = struct {
                 rend.drawButtonText(rect.x + 2, y, rect.w -| 4, category.label(), if (active) colors.fg_accent else colors.fg_secondary, colors.bg_sidebar, active, false);
             }
         } else if (rect.h > 11) {
-            rend.drawTextClipped(rect.x + 2, rect.y + 7, rect.w -| 4, "Make Vide yours.", colors.fg_accent, colors.bg_sidebar, true, false);
+            rend.drawTextClipped(rect.x + 2, rect.y + 7, rect.w -| 4, "Make Tuim yours.", colors.fg_accent, colors.bg_sidebar, true, false);
             rend.drawTextClipped(rect.x + 2, rect.y + 9, rect.w -| 4, "Manage your plugins", colors.fg_secondary, colors.bg_sidebar, false, false);
             rend.drawTextClipped(rect.x + 2, rect.y + 10, rect.w -| 4, "Explore new tools.", colors.fg_secondary, colors.bg_sidebar, false, false);
         }
@@ -290,7 +290,7 @@ pub const ExtensionShop = struct {
         rend.drawRect(rect, " ", colors.fg_primary, colors.bg_editor);
         if (rect.w < 34 or rect.h < 12) {
             if (self.confirm_remove or self.show_reload_confirm) {
-                if (rect.h > 0) rend.drawButtonText(rect.x, rect.y, rect.w, if (self.confirm_remove) "Uninstall?" else "Restart Vide?", @import("../theme.zig").readableForeground(colors.fg_primary, colors.bg_accent, 4.5), colors.bg_accent, true, false);
+                if (rect.h > 0) rend.drawButtonText(rect.x, rect.y, rect.w, if (self.confirm_remove) "Uninstall?" else "Restart Tuim?", @import("../theme.zig").readableForeground(colors.fg_primary, colors.bg_accent, 4.5), colors.bg_accent, true, false);
                 if (rect.h > 1) rend.drawTextClipped(rect.x, rect.y + 1, rect.w, "Enlarge to confirm", colors.fg_primary, colors.bg_editor, false, false);
                 if (rect.h > 2) rend.drawTextClipped(rect.x, rect.y + 2, rect.w, "N / Esc: cancel", colors.fg_secondary, colors.bg_editor, false, false);
                 return;
@@ -345,7 +345,7 @@ pub const ExtensionShop = struct {
             const title_fg = @import("../theme.zig").readableForeground(colors.fg_primary, colors.bg_accent, 4.5);
             rend.drawRect(confirm.card, " ", colors.fg_primary, colors.bg_sidebar);
             rend.drawRect(.{ .x = confirm.card.x, .y = confirm.card.y, .w = confirm.card.w, .h = 1 }, " ", colors.fg_primary, colors.bg_accent);
-            rend.drawTextClipped(confirm.card.x + 1, confirm.card.y, confirm.card.w -| 2, if (self.confirm_remove) "Uninstall?" else "Restart Vide?", title_fg, colors.bg_accent, true, false);
+            rend.drawTextClipped(confirm.card.x + 1, confirm.card.y, confirm.card.w -| 2, if (self.confirm_remove) "Uninstall?" else "Restart Tuim?", title_fg, colors.bg_accent, true, false);
             rend.drawTextClipped(confirm.card.x + 2, confirm.card.y + 1, confirm.card.w -| 4, if (self.confirm_remove and self.selected_idx < self.plugins.items.len) self.plugins.items[self.selected_idx].name else "Plugin changes saved.", colors.fg_primary, colors.bg_sidebar, false, false);
             rend.drawTextClipped(confirm.card.x + 2, confirm.card.y + 2, confirm.card.w -| 4, if (self.confirm_remove) "Configuration will be kept." else "Restart to apply them.", colors.fg_secondary, colors.bg_sidebar, false, false);
             rend.drawButtonText(confirm.accept.x, confirm.accept.y, confirm.accept.w, if (self.confirm_remove) "[Y] Remove" else "[Y] Restart", @import("../theme.zig").readableForeground(colors.fg_primary, colors.bg_accent, 4.5), colors.bg_accent, true, false);
@@ -366,7 +366,7 @@ pub const ExtensionShop = struct {
         rend.drawTextClipped(rect.x, rect.y, rect.w, p.name, colors.fg_primary, colors.bg_editor, true, false);
         rend.drawTextClipped(rect.x, rect.y + 1, rect.w, p.full_name, colors.fg_secondary, colors.bg_editor, false, false);
         if (rect.h > 3) rend.drawTextClipped(rect.x, rect.y + 3, rect.w, p.status, colors.fg_accent, colors.bg_editor, true, false);
-        if (rect.h > 5) rend.drawButtonText(rect.x, rect.y + 5, rect.w, if (p.protected) "Managed by Vide / local source" else if (p.installed) "E  Configure plugin" else "Enter  Install plugin", @import("../theme.zig").readableForeground(colors.fg_primary, colors.bg_accent, 4.5), colors.bg_accent, true, false);
+        if (rect.h > 5) rend.drawButtonText(rect.x, rect.y + 5, rect.w, if (p.protected) "Managed by Tuim / local source" else if (p.installed) "E  Configure plugin" else "Enter  Install plugin", @import("../theme.zig").readableForeground(colors.fg_primary, colors.bg_accent, 4.5), colors.bg_accent, true, false);
         if (p.installed and !p.protected) {
             if (rect.h > 7) rend.drawButtonText(rect.x, rect.y + 7, rect.w, if (p.enabled) "D  Disable plugin" else "D  Enable plugin", colors.fg_primary, colors.bg_sidebar, false, false);
             if (rect.h > 9) rend.drawButtonText(rect.x, rect.y + 9, rect.w, "U  Uninstall plugin", colors.fg_secondary, colors.bg_sidebar, false, false);
@@ -504,7 +504,7 @@ pub const ExtensionShop = struct {
         if (idx >= self.plugins.items.len) return;
         const p = self.plugins.items[idx];
         if (p.protected) {
-            self.setMessage("This plugin is managed by Vide or its source.");
+            self.setMessage("This plugin is managed by Tuim or its source.");
             return;
         }
         const script_path = try std.fs.path.join(self.allocator, &.{ self.data_dir, "store_search.py" });
@@ -525,7 +525,7 @@ pub const ExtensionShop = struct {
         }
         const term = try child.wait(self.io);
         const parsed = std.json.parseFromSlice(struct { success: bool, message: []const u8 }, self.allocator, output.items, .{ .ignore_unknown_fields = true }) catch {
-            self.setMessage("Unable to update plugin. Inspect the Vide log.");
+            self.setMessage("Unable to update plugin. Inspect the Tuim log.");
             return;
         };
         defer parsed.deinit();
@@ -566,7 +566,7 @@ pub const ExtensionShop = struct {
                 const template = try std.fmt.bufPrint(
                     &template_buf,
                     "-- Configuration for {s}\n" ++
-                        "-- Restart Vide after saving. Return a lazy.nvim spec override.\n" ++
+                        "-- Restart Tuim after saving. Return a lazy.nvim spec override.\n" ++
                         "-- opts configures plugins using automatic setup.\n" ++
                         "-- For bundled custom setup, override config with a function.\n\n" ++
                         "return {{\n" ++

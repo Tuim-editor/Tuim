@@ -32,7 +32,7 @@ def archive(path, files):
             tar.addfile(info, io.BytesIO(data))
 
 
-with tempfile.TemporaryDirectory(prefix='vide-installer-test-') as directory:
+with tempfile.TemporaryDirectory(prefix='tuim-installer-test-') as directory:
     base = Path(directory)
     fixtures = base / 'fixtures'
     fixtures.mkdir()
@@ -41,23 +41,23 @@ with tempfile.TemporaryDirectory(prefix='vide-installer-test-') as directory:
     calls = base / 'calls.log'
     nvim = '''#!/usr/bin/env bash
 if [ "${1:-}" = --version ]; then echo 'NVIM v0.12.4'; exit; fi
-printf 'bootstrap:%s:%s\\n' "$NVIM_APPNAME" "$VIDE_INIT_PATH" >> "$VIDE_FIXTURE_CALLS"
-test -f "$VIDE_INIT_PATH" || exit 8
-[ "${VIDE_DISABLE_PLUGINS:-}" != 1 ] || exit 9
-[ "${VIDE_FIXTURE_BOOT_FAIL:-0}" != 1 ] || exit 7
+printf 'bootstrap:%s:%s\\n' "$NVIM_APPNAME" "$TUIM_INIT_PATH" >> "$TUIM_FIXTURE_CALLS"
+test -f "$TUIM_INIT_PATH" || exit 8
+[ "${TUIM_DISABLE_PLUGINS:-}" != 1 ] || exit 9
+[ "${TUIM_FIXTURE_BOOT_FAIL:-0}" != 1 ] || exit 7
 '''
     files = {
-        'vide-linux-x86_64/bin/vide': '#!/bin/sh\necho "Vide fixture"\n',
-        'vide-linux-x86_64/lib/vide/vide': '#!/bin/sh\necho "Vide fixture"\n',
-        'vide-linux-x86_64/lib/vide/nvim/bin/nvim': nvim,
-        'vide-linux-x86_64/lib/vide/nvim/share/nvim/runtime/doc/help.txt': 'runtime',
-        'vide-linux-x86_64/lib/vide/vide_init.lua': '-- bundled matching init',
+        'tuim-linux-x86_64/bin/tuim': '#!/bin/sh\necho "Tuim fixture"\n',
+        'tuim-linux-x86_64/lib/tuim/tuim': '#!/bin/sh\necho "Tuim fixture"\n',
+        'tuim-linux-x86_64/lib/tuim/nvim/bin/nvim': nvim,
+        'tuim-linux-x86_64/lib/tuim/nvim/share/nvim/runtime/doc/help.txt': 'runtime',
+        'tuim-linux-x86_64/lib/tuim/tuim_init.lua': '-- bundled matching init',
     }
 
     def make_release(contents):
-        archive(fixtures / 'vide-linux-x86_64.tar.gz', contents)
-        digest = hashlib.sha256((fixtures / 'vide-linux-x86_64.tar.gz').read_bytes()).hexdigest()
-        (fixtures / 'SHA256SUMS').write_text(f'{digest}  vide-linux-x86_64.tar.gz\n')
+        archive(fixtures / 'tuim-linux-x86_64.tar.gz', contents)
+        digest = hashlib.sha256((fixtures / 'tuim-linux-x86_64.tar.gz').read_bytes()).hexdigest()
+        (fixtures / 'SHA256SUMS').write_text(f'{digest}  tuim-linux-x86_64.tar.gz\n')
 
     make_release(files)
     (fixtures / 'release.json').write_text(json.dumps({'tag_name': 'v9.8.7'}))
@@ -74,8 +74,8 @@ while [ "$#" -gt 0 ]; do
  shift
 done
 mkdir -p "$prefix/bin"
-printf '#!/bin/sh\\necho "source fixture"\\n' > "$prefix/bin/vide"
-chmod 755 "$prefix/bin/vide"
+printf '#!/bin/sh\\necho "source fixture"\\n' > "$prefix/bin/tuim"
+chmod 755 "$prefix/bin/tuim"
 '''
     archive(fixtures / 'zig.tar.xz', {'zig-fixture/zig': zig})
     digest = hashlib.sha256((fixtures / 'zig.tar.xz').read_bytes()).hexdigest()
@@ -87,13 +87,13 @@ chmod 755 "$prefix/bin/vide"
     executable(mockbin / 'curl', '''#!/usr/bin/env python3
 import os, pathlib, shutil, sys
 args=sys.argv[1:]; url=args[-1]; target=pathlib.Path(args[args.index('-o')+1])
-root=pathlib.Path(os.environ['VIDE_FIXTURES'])
-with open(os.environ['VIDE_FIXTURE_CALLS'], 'a') as file: file.write(url+'\\n')
-if url.endswith('/vide/releases/latest'): name='release.json'
+root=pathlib.Path(os.environ['TUIM_FIXTURES'])
+with open(os.environ['TUIM_FIXTURE_CALLS'], 'a') as file: file.write(url+'\\n')
+if url.endswith('/tuim/releases/latest'): name='release.json'
 elif '/tree-sitter/releases/tags/' in url: name='tree-sitter-linux-x64.gz.json'
 elif '/neovim/releases/tags/' in url: name='nvim-linux-x86_64.tar.gz.json'
 elif url.endswith('/download/index.json'): name='zig-index.json'
-elif 'raw.githubusercontent.com/Rouboufy/vide/v9.8.7/' in url:
+elif 'raw.githubusercontent.com/Rouboufy/tuim/v9.8.7/' in url:
  target.write_text('-- matching legacy release init'); sys.exit(0)
 else: name=url.rsplit('/',1)[-1]
 source=root/name
@@ -103,9 +103,9 @@ shutil.copyfile(source,target)
     for cmd in ('tree-sitter', 'nvim', 'zig'):
         executable(mockbin / cmd, '#!/bin/sh\nexit 1\n')
     env = os.environ.copy()
-    env.update(PATH=str(mockbin) + ':' + env['PATH'], VIDE_FIXTURES=str(fixtures),
-               VIDE_FIXTURE_CALLS=str(calls), VIDE_TEST_MISSING='',
-               VIDE_TEST_PLATFORM='Linux', VIDE_TEST_ARCH='x86_64', VIDE_SKIP_ONBOARDING='1')
+    env.update(PATH=str(mockbin) + ':' + env['PATH'], TUIM_FIXTURES=str(fixtures),
+               TUIM_FIXTURE_CALLS=str(calls), TUIM_TEST_MISSING='',
+               TUIM_TEST_PLATFORM='Linux', TUIM_TEST_ARCH='x86_64', TUIM_SKIP_ONBOARDING='1')
 
     def install(name, args=('--yes',), pipe=False, overrides=None, script=None):
         home = base / name
@@ -121,45 +121,45 @@ shutil.copyfile(source,target)
                                 start_new_session=True, timeout=30)
         return home, result
 
-    home, result = install('piped install with spaces', pipe=True, overrides={'VIDE_DISABLE_PLUGINS': '1'})
+    home, result = install('piped install with spaces', pipe=True, overrides={'TUIM_DISABLE_PLUGINS': '1'})
     assert result.returncode == 0, result.stdout + result.stderr
-    launcher = home / '.local/bin/vide'
+    launcher = home / '.local/bin/tuim'
     assert launcher.is_symlink() and launcher.resolve().is_file()
-    assert (home / 'data/vide/tools/bin/tree-sitter').is_file()
-    assert 'bootstrap:vide:' in calls.read_text()
+    assert (home / 'data/tuim/tools/bin/tree-sitter').is_file()
+    assert 'bootstrap:tuim:' in calls.read_text()
     assert '/releases/download/v9.8.7/' in calls.read_text()
     assert 'raw.githubusercontent' not in calls.read_text(), 'Bundled init should be preferred'
-    assert 'Vide installed at' in result.stdout
-    settings = home / 'data/vide/settings.json'
+    assert 'Tuim installed at' in result.stdout
+    settings = home / 'data/tuim/settings.json'
     settings.write_text('{"theme":"nord"}')
     _, result = install(home.name)
     assert result.returncode == 0 and settings.read_text() == '{"theme":"nord"}'
 
-    (fixtures / 'SHA256SUMS').write_text('bad  vide-linux-x86_64.tar.gz\n')
+    (fixtures / 'SHA256SUMS').write_text('bad  tuim-linux-x86_64.tar.gz\n')
     _, result = install(home.name)
     assert result.returncode != 0 and 'checksum' in result.stderr
     assert launcher.resolve().is_file() and settings.read_text() == '{"theme":"nord"}'
-    assert 'Vide installed at' not in result.stdout
+    assert 'Tuim installed at' not in result.stdout
 
-    make_release({k: v for k, v in files.items() if not k.endswith('lib/vide/nvim/bin/nvim')})
+    make_release({k: v for k, v in files.items() if not k.endswith('lib/tuim/nvim/bin/nvim')})
     _, result = install('broken-bundle')
     assert result.returncode != 0 and 'Invalid release bundle' in result.stderr
     make_release(files)
-    _, result = install('failed-bootstrap', overrides={'VIDE_FIXTURE_BOOT_FAIL': '1'})
-    assert result.returncode != 0 and 'Vide installed at' not in result.stdout
+    _, result = install('failed-bootstrap', overrides={'TUIM_FIXTURE_BOOT_FAIL': '1'})
+    assert result.returncode != 0 and 'Tuim installed at' not in result.stdout
     calls.write_text('')
     _, result = install('no-plugins', args=('--no-plugins', '--yes'))
     assert result.returncode == 0, result.stderr
     assert 'bootstrap:' not in calls.read_text() and 'tree-sitter' not in calls.read_text()
 
-    make_release({k: v for k, v in files.items() if not k.endswith('vide_init.lua')})
+    make_release({k: v for k, v in files.items() if not k.endswith('tuim_init.lua')})
     calls.write_text('')
     _, result = install('legacy-bundle')
     assert result.returncode == 0, result.stderr
-    assert '/vide/v9.8.7/src/nvim/vide_init.lua' in calls.read_text()
+    assert '/tuim/v9.8.7/src/nvim/tuim_init.lua' in calls.read_text()
     make_release(files)
 
-    _, result = install('no-tty', args=(), overrides={'VIDE_TEST_MISSING': 'git'})
+    _, result = install('no-tty', args=(), overrides={'TUIM_TEST_MISSING': 'git'})
     assert result.returncode != 0 and 'Use --yes' in result.stderr
 
     project = base / 'source project'
@@ -167,12 +167,12 @@ shutil.copyfile(source,target)
     shutil.copyfile(ROOT / 'setup.sh', project / 'setup.sh')
     (project / 'build.zig').write_text('// source fixture')
     (project / 'src/nvim').mkdir(parents=True)
-    (project / 'src/nvim/vide_init.lua').write_text('-- init')
+    (project / 'src/nvim/tuim_init.lua').write_text('-- init')
     source_home, result = install('source-home', args=('--source', '--yes'), script=project / 'setup.sh')
     assert result.returncode == 0, result.stdout + result.stderr
-    assert (source_home / 'data/vide/tools/bin/zig').is_symlink()
-    assert (source_home / 'data/vide/tools/nvim/bin/nvim').is_file()
-    source_launcher = source_home / '.local/bin/vide'
+    assert (source_home / 'data/tuim/tools/bin/zig').is_symlink()
+    assert (source_home / 'data/tuim/tools/nvim/bin/nvim').is_file()
+    source_launcher = source_home / '.local/bin/tuim'
     launched = subprocess.check_output([str(source_launcher)], text=True, env=env)
     assert 'source fixture' in launched
     assert 'PATH=.' not in source_launcher.read_text()

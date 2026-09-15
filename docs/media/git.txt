@@ -1,6 +1,6 @@
     │ SOURCE CONTROL     [ More ] │  [No Name]    x  +                                                        |     -
   E │  unknown                   │                         Warning: Plugins are disabled for this recovery session.
-    │  Message (Enter to commit)  │                         VIDE
+    │  Message (Enter to commit)  │                         TUIM
     │─────────────────────────────│
   S │                             │              Terminal-native editor and IDE
     │                             │

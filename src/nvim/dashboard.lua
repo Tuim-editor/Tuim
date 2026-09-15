@@ -1,11 +1,11 @@
 local M = {}
 
-_G.vide_show_dashboard = function()
+_G.tuim_show_dashboard = function()
     local buf = vim.api.nvim_create_buf(false, true)
     vim.bo[buf].buftype = 'nofile'
     vim.bo[buf].bufhidden = 'wipe'
     vim.bo[buf].swapfile = false
-    vim.bo[buf].filetype = 'vide_dashboard'
+    vim.bo[buf].filetype = 'tuim_dashboard'
 
     local logo = {
         "██╗   ██╗██╗██████╗ ███████╗",
@@ -59,7 +59,7 @@ end
 vim.api.nvim_create_autocmd("VimEnter", {
     callback = function()
         if vim.fn.argc() == 0 then
-            _G.vide_show_dashboard()
+            _G.tuim_show_dashboard()
         end
     end
 })

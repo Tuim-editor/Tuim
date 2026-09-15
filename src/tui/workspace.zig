@@ -80,7 +80,7 @@ pub fn paletteRect(layout: Layout) Rect {
 pub fn selectBuffer(a: *App, index: usize) void {
     if (index >= a.tabs.items.len) return;
     var args = [_]Value{.{ .integer = a.tabs.items[index].bufnr }};
-    const params = [_]Value{ .{ .string = "return _G.vide_select_buffer(...)" }, .{ .array = &args } };
+    const params = [_]Value{ .{ .string = "return _G.tuim_select_buffer(...)" }, .{ .array = &args } };
     a.rpc.notify("nvim_exec_lua", &params) catch |err| a.notify(.failure, "Unable to select file: {}", .{err});
     a.sidebar_focus = false;
     a.terminal_focus = false;
@@ -209,7 +209,7 @@ pub fn drawSidebar(a: *App, layout: Layout) void {
     const t = &chrome;
     a.ren.drawRect(.{ .x = 0, .y = 0, .w = rect.w, .h = @min(2, layout.total.h) }, " ", t.fg_primary, t.bg_sidebar);
     var title: [160]u8 = undefined;
-    const project = std.fmt.bufPrint(&title, "vide / {s}", .{a.git_panel.current_branch orelse "main"}) catch "vide";
+    const project = std.fmt.bufPrint(&title, "tuim / {s}", .{a.git_panel.current_branch orelse "main"}) catch "tuim";
     a.ren.drawTextClipped(1, 0, rect.w -| 2, project, t.fg_accent, t.bg_sidebar, true, false);
     if (layout.total.h > 1) a.ren.drawButtonText(1, 1, rect.w -| 2, if (a.workspace.overview) "WORKSPACE" else "< Workspace [Esc]", t.fg_secondary, t.bg_sidebar, false, false);
     if (!a.workspace.overview) return;

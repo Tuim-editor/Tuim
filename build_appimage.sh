@@ -3,24 +3,24 @@ set -euo pipefail
 
 VERSION="${VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo unknown)}"
 COMMIT_SHA="${COMMIT_SHA:-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)}"
-VIDE_BUG_REPORT_ENDPOINT="${VIDE_BUG_REPORT_ENDPOINT:-}"
+TUIM_BUG_REPORT_ENDPOINT="${TUIM_BUG_REPORT_ENDPOINT:-}"
 NEOVIM_VERSION="${NEOVIM_VERSION:-v0.12.4}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
-APP_DIR="${APP_DIR:-$ROOT/Vide.AppDir}"
+APP_DIR="${APP_DIR:-$ROOT/Tuim.AppDir}"
 OUTPUT_DIR="${OUTPUT_DIR:-$ROOT}"
-WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/vide-appimage.XXXXXX")"
+WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/tuim-appimage.XXXXXX")"
 trap 'rm -rf "$WORK_DIR"' EXIT
 
 rm -rf "$APP_DIR"
 mkdir -p "$APP_DIR/usr/bin" "$APP_DIR/usr/share/applications" "$APP_DIR/usr/share/metainfo" "$APP_DIR/usr/share/icons/hicolor/scalable/apps" "$OUTPUT_DIR"
 
-echo "Building Vide $VERSION ($COMMIT_SHA) for x86_64-linux-musl..."
+echo "Building Tuim $VERSION ($COMMIT_SHA) for x86_64-linux-musl..."
 ZIG_GLOBAL_CACHE_DIR="${ZIG_GLOBAL_CACHE_DIR:-$WORK_DIR/zig-global}" \
 ZIG_LOCAL_CACHE_DIR="${ZIG_LOCAL_CACHE_DIR:-$WORK_DIR/zig-local}" \
 zig build -Doptimize=ReleaseFast -Dtarget=x86_64-linux-musl -Dversion="$VERSION" \
-    -Dbug-report-endpoint="$VIDE_BUG_REPORT_ENDPOINT" --prefix "$WORK_DIR/vide"
-cp "$WORK_DIR/vide/bin/vide" "$APP_DIR/usr/bin/vide"
+    -Dbug-report-endpoint="$TUIM_BUG_REPORT_ENDPOINT" --prefix "$WORK_DIR/tuim"
+cp "$WORK_DIR/tuim/bin/tuim" "$APP_DIR/usr/bin/tuim"
 
 if [[ -n "${NEOVIM_SOURCE_DIR:-}" ]]; then
     echo "Using Neovim from $NEOVIM_SOURCE_DIR"
@@ -37,15 +37,15 @@ else
 fi
 
 cp "$ROOT/packaging/AppRun" "$APP_DIR/AppRun"
-cp "$ROOT/packaging/vide.desktop" "$APP_DIR/vide.desktop"
-cp "$ROOT/packaging/vide.desktop" "$APP_DIR/usr/share/applications/vide.desktop"
-cp "$ROOT/packaging/vide.svg" "$APP_DIR/vide.svg"
-cp "$ROOT/packaging/vide.svg" "$APP_DIR/usr/share/icons/hicolor/scalable/apps/vide.svg"
-cp "$ROOT/packaging/vide.appdata.xml" "$APP_DIR/usr/share/metainfo/io.github.rouboufy.vide.metainfo.xml"
-chmod 755 "$APP_DIR/AppRun" "$APP_DIR/usr/bin/vide" "$APP_DIR/usr/bin/nvim"
+cp "$ROOT/packaging/tuim.desktop" "$APP_DIR/tuim.desktop"
+cp "$ROOT/packaging/tuim.desktop" "$APP_DIR/usr/share/applications/tuim.desktop"
+cp "$ROOT/packaging/tuim.svg" "$APP_DIR/tuim.svg"
+cp "$ROOT/packaging/tuim.svg" "$APP_DIR/usr/share/icons/hicolor/scalable/apps/tuim.svg"
+cp "$ROOT/packaging/tuim.appdata.xml" "$APP_DIR/usr/share/metainfo/io.github.rouboufy.tuim.metainfo.xml"
+chmod 755 "$APP_DIR/AppRun" "$APP_DIR/usr/bin/tuim" "$APP_DIR/usr/bin/nvim"
 
 cat >"$APP_DIR/VERSION.txt" <<EOF
-Vide version: $VERSION
+Tuim version: $VERSION
 Git commit: $COMMIT_SHA
 Bundled Neovim: $NEOVIM_VERSION
 Architecture: x86_64-linux-musl
@@ -62,11 +62,11 @@ curl -fL --retry 3 -o "$linuxdeploy" \
 chmod 755 "$linuxdeploy"
 
 echo "Packaging AppImage without requiring FUSE..."
-rm -f "$ROOT/Vide-$VERSION-x86_64.AppImage"
+rm -f "$ROOT/Tuim-$VERSION-x86_64.AppImage"
 ARCH=x86_64 LINUXDEPLOY_OUTPUT_VERSION="$VERSION" "$linuxdeploy" --appimage-extract-and-run --appdir "$APP_DIR" --output appimage
-generated="$ROOT/Vide-$VERSION-x86_64.AppImage"
+generated="$ROOT/Tuim-$VERSION-x86_64.AppImage"
 [[ -f "$generated" ]] || { echo "linuxdeploy did not create $generated" >&2; exit 1; }
-output="$OUTPUT_DIR/Vide-$VERSION-x86_64.AppImage"
+output="$OUTPUT_DIR/Tuim-$VERSION-x86_64.AppImage"
 if [[ "$generated" != "$output" ]]; then mv "$generated" "$output"; fi
 chmod 755 "$output"
 sha256sum "$output" >"$output.sha256"

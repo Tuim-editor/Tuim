@@ -1,10 +1,10 @@
-# Using Vide
+# Using Tuim
 
 [Back to the README](../README.md)
 
 ## Workspace basics
 
-VIDE opens with Explorer visible by default. Click **< Workspace** above it to
+TUIM opens with Explorer visible by default. Click **< Workspace** above it to
 reach the open-files and tools list.
 
 Normal and IDE use one compact workspace sidebar for open files and tools, with
@@ -35,7 +35,7 @@ then **Enter** to commit or **Esc** to return to the list.
 Open **AI assistants** from the workspace list. Select the assistant name to
 change it; the chooser shows which CLIs are installed and which chats are
 running. Choose an assistant, then **Open chat** and type your request in its
-terminal. Install missing assistant CLIs in your terminal and restart Vide to
+terminal. Install missing assistant CLIs in your terminal and restart Tuim to
 refresh detection.
 
 In the AI sidebar, **Up/Down** or **Tab/Shift+Tab** selects an item and **Enter**
@@ -51,20 +51,20 @@ apply to the assistant whose chat is currently open.
 
 ## First run
 
-On its first launch, Vide explains how to open, edit, and save a file, with
+On its first launch, Tuim explains how to open, edit, and save a file, with
 plain-language choices for IDE and Normal (Vim) editing. Press `i` or `n` to
 choose a style and start editing. Optional language-server setup is available
-with `l`, which opens Vide's built-in package manager on the LSP tab. Close the guide with Enter, Escape, `q`, Ctrl+C, or by clicking
-**Click to close guide** at the top. Closing keeps Vide open and preserves your current
+with `l`, which opens Tuim's built-in package manager on the LSP tab. Close the guide with Enter, Escape, `q`, Ctrl+C, or by clicking
+**Click to close guide** at the top. Closing keeps Tuim open and preserves your current
 editing style. Reopen it from the Help page by pressing `o`, or run
-`:VideOnboarding` in Normal mode. The choice and completion marker are stored
-only in Vide's isolated data directory.
+`:TuimOnboarding` in Normal mode. The choice and completion marker are stored
+only in Tuim's isolated data directory.
 
 ## Default Keybindings
 
 ### TUI Interface Controls
 
-These keybindings are handled directly by the Vide TUI layer:
+These keybindings are handled directly by the Tuim TUI layer:
 
 | Action | Keybinding |
 | :--- | :--- |
@@ -86,7 +86,7 @@ These shipped mappings apply primarily in Normal mode (`Leader = Space`). IDE mo
 | Action | Keybinding |
 | :--- | :--- |
 | **Save file** | `Ctrl + S` |
-| **Force quit Vide** | `Ctrl + Q` |
+| **Force quit Tuim** | `Ctrl + Q` |
 | **Open new buffer** | `Ctrl + N` |
 | **Find files (Telescope, with a filename prompt when plugins are unavailable)** | `Space f f` or `Ctrl + P` |
 | **Search project text with ripgrep (Telescope)** | `Space f g` or `Alt + G` |
@@ -145,7 +145,7 @@ Ctrl+L selects the current line. Ctrl/Cmd+F opens buffer search and Ctrl+H
 (Cmd+R on terminals that report it) opens replace. Home, End, Ctrl+Arrow, mouse
 click, and mouse drag use Neovim's terminal-native navigation and selection.
 Some terminals cannot distinguish Cmd from Alt or report shifted modifiers;
-Vide keeps the Ctrl form available and uses the terminal capability fallback.
+Tuim keeps the Ctrl form available and uses the terminal capability fallback.
 Use the command menu and editor context menu when a terminal does not report
 a shortcut distinctly.
 Escape and incidental mode changes return editable file buffers to text-entry
@@ -161,9 +161,9 @@ In Settings > Appearance > Theme, **System (follow desktop)** follows the
 current Omarchy palette for editor, syntax, sidebar, and selection colors.
 It reads `omarchy/current/theme/colors.toml` under `XDG_STATE_HOME` (normally
 `~/.local/state`), with the older `XDG_CONFIG_HOME` location as a fallback.
-Changes apply automatically while Vide is open. The option needs no theme
+Changes apply automatically while Tuim is open. The option needs no theme
 plugin and keeps `system` as the saved preference. If the palette is missing
-or invalid at startup, Vide reports that it is using default colors and keeps
+or invalid at startup, Tuim reports that it is using default colors and keeps
 watching for a valid palette. Choosing another theme stops following the desktop.
 
 ### Extensions
@@ -189,14 +189,14 @@ select plugins. Settings > Plugins > Installed Plugins opens this same panel.
 | Install / reinstall | Enter |
 | Return to list (compact), or return to editor | Escape |
 
-Restart Vide to apply installation, activation, and removal changes. Disabled
+Restart Tuim to apply installation, activation, and removal changes. Disabled
 plugins remain on disk. Uninstall removes only the selected plugin on the next
 normal startup and preserves its configuration for reinstallation. Dependencies
 required by enabled plugins must be kept; disable their dependents first.
-Vide's plugin manager and unmanaged local directories are protected.
+Tuim's plugin manager and unmanaged local directories are protected.
 
-Configuration opens as a Lua file under `$XDG_DATA_HOME/vide/plugin_configs/`
-(default `~/.local/share/vide/plugin_configs/`). Save it and restart. Return a
+Configuration opens as a Lua file under `$XDG_DATA_HOME/tuim/plugin_configs/`
+(default `~/.local/share/tuim/plugin_configs/`). Save it and restart. Return a
 [lazy.nvim spec override](https://lazy.folke.io/spec), for example:
 
 ```lua
@@ -217,28 +217,28 @@ return {
 }
 ```
 
-An explicit `config` replaces Vide's setup for that plugin. Repository identity,
+An explicit `config` replaces Tuim's setup for that plugin. Repository identity,
 dependencies, and enable/disable state stay under the manager's control. Invalid
 configuration is reported without aborting the editor. Recovery mode
-(`VIDE_DISABLE_PLUGINS=1 vide`) skips user config execution so you can repair it.
+(`TUIM_DISABLE_PLUGINS=1 tuim`) skips user config execution so you can repair it.
 **Settings > Plugins > Plugin Manager** retains Lazy's update and sync tools;
 **Mason Settings** manages language servers and formatters separately.
 
 ### Language Tools
 
-Vide detects common project markers for Zig, Lua, Python, Rust,
+Tuim detects common project markers for Zig, Lua, Python, Rust,
 JavaScript/TypeScript, Go, and C/C++, then recommends only the matching Mason
 language servers. Projects without recognized markers remain manual rather
 than installing unrelated tools. Open Settings > Plugins > Mason Settings for
 the health summary, active servers, recommended packages, missing executables,
 and installed LSP/formatter/linter status. Missing or failed tooling is also
-reported through native notices with details in the Vide log.
+reported through native notices with details in the Tuim log.
 
 ### Accessibility and Terminal Fallbacks
 
 All primary controls are keyboard accessible; sidebar lists show their
 navigation keys and focused controls use both color and a visible marker or
-inverse background. Vide supplies text-symbol alternatives when Nerd Fonts are
+inverse background. Tuim supplies text-symbol alternatives when Nerd Fonts are
 disabled and keeps keyboard routes available when mouse reporting is absent.
 Dialogs show explicit empty, loading, success, and error messages, and compact
 terminals receive a resize instruction instead of clipped or unsafe layouts.

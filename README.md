@@ -1,18 +1,18 @@
-# Vide
+# Tuim
 
 **Your editor. Your terminal.**
 
-Vide is a terminal workspace written in Zig, with Neovim as its editing engine.
+Tuim is a terminal workspace written in Zig, with Neovim as its editing engine.
 It brings an Explorer, Git, an integrated shell, settings, and coding-assistant
-launchers into one keyboard- and mouse-accessible interface. Vide uses its own
+launchers into one keyboard- and mouse-accessible interface. Tuim uses its own
 configuration and plugin environment, separate from your regular Neovim setup.
 
-[Website](https://rouboufy.github.io/vide/) ·
-**v0.3.0** · [Release notes](docs/releases/v0.3.0.md) · [Latest release](https://github.com/Rouboufy/vide/releases/latest) ·
+[Website](https://rouboufy.github.io/tuim/) ·
+**v0.3.0** · [Release notes](docs/releases/v0.3.0.md) · [Latest release](https://github.com/Rouboufy/tuim/releases/latest) ·
 [Usage guide](docs/usage.md) ·
-[Issues](https://github.com/Rouboufy/vide/issues)
+[Issues](https://github.com/Rouboufy/tuim/issues)
 
-[![Vide editing build.zig with the current Explorer sidebar](docs/screenshots/explorer.webp)](docs/screenshots/explorer.webp)
+[![Tuim editing build.zig with the current Explorer sidebar](docs/screenshots/explorer.webp)](docs/screenshots/explorer.webp)
 
 *Actual terminal capture from the current source build, using a demo project
 and portable symbols with the default VS Code Dark Modern theme and Treesitter enabled. Published releases may
@@ -39,7 +39,7 @@ differ. See [screenshot capture instructions](docs/screenshots/README.md).*
 
 | Mode | Behavior |
 | --- | --- |
-| **Normal** | Neovim's modal editing with the Vide workspace around it. |
+| **Normal** | Neovim's modal editing with the Tuim workspace around it. |
 | **IDE** | Modeless file editing with familiar selection, clipboard, save, and undo shortcuts. Utility and plugin buffers keep their required modes. |
 | **Zen** | The editor fills the viewport except for a small mode/return footer. The sidebar and terminal are hidden. |
 
@@ -59,13 +59,13 @@ broader verification; see [terminal compatibility](docs/terminal-compatibility.m
 ### Recommended installer
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Rouboufy/vide/main/setup.sh | bash
-vide
+curl -fsSL https://raw.githubusercontent.com/Rouboufy/tuim/main/setup.sh | bash
+tuim
 ```
 
 The [installer](setup.sh) downloads the latest matching release bundle, verifies
-its SHA-256 checksum, and installs it under Vide's data directory. It links the
-launcher at `~/.local/bin/vide`. **Release bundles include a private Neovim
+its SHA-256 checksum, and installs it under Tuim's data directory. It links the
+launcher at `~/.local/bin/tuim`. **Release bundles include a private Neovim
 runtime; neither a separate Neovim installation nor Zig is needed.**
 
 The installer checks required dependencies and asks before installing missing
@@ -86,14 +86,14 @@ Options: `--dry-run`, `--no-plugins` (skip plugin/parser bootstrap and parser bu
 `--yes`. Unsupported release targets require an explicit source build; the
 installer does not silently fall back to compilation.
 
-If `vide` is not found, add `~/.local/bin` to your shell's `PATH`. Run
-`vide --version` to print the build version without opening the application.
+If `tuim` is not found, add `~/.local/bin` to your shell's `PATH`. Run
+`tuim --version` to print the build version without opening the application.
 
 ### Other downloads
 
-- [Native release bundles](https://github.com/Rouboufy/vide/releases/latest):
+- [Native release bundles](https://github.com/Rouboufy/tuim/releases/latest):
   Linux and macOS archives with checksums and bundled Neovim.
-- [Linux x86-64 AppImage](https://github.com/Rouboufy/vide/releases/latest/download/Vide-linux-x86_64.AppImage):
+- [Linux x86-64 AppImage](https://github.com/Rouboufy/tuim/releases/latest/download/Tuim-linux-x86_64.AppImage):
   a portable package with Neovim included. See [AppImage instructions](docs/appimage.md).
 
 ### Build from source
@@ -103,10 +103,10 @@ Python 3 is needed for the plugin marketplace and installed plugin menu. A Nerd 
 icons are enabled by default and can be replaced with portable symbols in Settings.
 
 ```bash
-git clone https://github.com/Rouboufy/vide.git
-cd vide
+git clone https://github.com/Rouboufy/tuim.git
+cd tuim
 zig build -Doptimize=ReleaseFast
-./zig-out/bin/vide
+./zig-out/bin/tuim
 ```
 
 For a user-local source installation, run `bash setup.sh --source --yes` from the
@@ -117,7 +117,7 @@ tools without replacing your system executables.
 ### Update and uninstall
 
 For a release installation, rerun the recommended installer. It preserves
-Vide's settings and plugin data. For a source build, pull the checkout and rebuild:
+Tuim's settings and plugin data. For a source build, pull the checkout and rebuild:
 
 ```bash
 git pull --ff-only
@@ -125,7 +125,7 @@ zig build -Doptimize=ReleaseFast
 ```
 
 From a source checkout, `bash uninstall.sh --binary` removes the launcher while
-keeping data. `bash uninstall.sh --all` removes Vide's configuration, plugins,
+keeping data. `bash uninstall.sh --all` removes Tuim's configuration, plugins,
 bundled runtime, cache, and sessions after confirmation. See
 `bash uninstall.sh --help` for selective removal options.
 
@@ -133,7 +133,7 @@ bundled runtime, cache, and sessions after confirmation. See
 
 First launch offers a simple guide to opening, editing, and saving files,
 with a choice of editing style and an easy-to-find close action. Reopen it with
-`:VideOnboarding` in Normal mode.
+`:TuimOnboarding` in Normal mode.
 
 | Action | Default shortcut |
 | --- | --- |
@@ -165,17 +165,17 @@ language tools, and accessibility behavior.
 New installs default to **[VS Code Dark Modern](https://code.visualstudio.com/docs/configure/themes)**; saved theme choices are preserved.
 Open **F1 → Settings → Appearance** to select it on an existing installation.
 Settings → About shows the running versions and active
-settings, data, and log paths. Vide uses `NVIM_APPNAME=vide` and the standard XDG
+settings, data, and log paths. Tuim uses `NVIM_APPNAME=tuim` and the standard XDG
 locations, honoring their environment overrides:
 
 | Default directory | Contents |
 | --- | --- |
-| `~/.config/vide` | Configuration |
-| `~/.local/share/vide` | Settings, plugins, parsers, private tools, and release runtime |
-| `~/.local/state/vide` | Sessions and runtime state |
-| `~/.cache/vide` | Caches and generated artifacts |
+| `~/.config/tuim` | Configuration |
+| `~/.local/share/tuim` | Settings, plugins, parsers, private tools, and release runtime |
+| `~/.local/state/tuim` | Sessions and runtime state |
+| `~/.cache/tuim` | Caches and generated artifacts |
 
-Vide does not load your Neovim init or modify your standard Neovim directories.
+Tuim does not load your Neovim init or modify your standard Neovim directories.
 The optional **System** theme can read the Omarchy desktop palette and reuse
 installed theme assets without loading your Neovim configuration. Details are
 in the [usage guide](docs/usage.md).
@@ -188,7 +188,7 @@ in the [usage guide](docs/usage.md).
   disabling keeps plugin files and uninstalling keeps your configuration.
 - **Plugins fail to load:** inspect the log path in Settings → About. Retry
   synchronization with `s` in Settings → Plugins → Plugin Manager. For recovery,
-  run `VIDE_DISABLE_PLUGINS=1 vide`; this skips loading plugins without deleting them.
+  run `TUIM_DISABLE_PLUGINS=1 tuim`; this skips loading plugins without deleting them.
 - **Broken icons:** select portable symbols in Settings or use a Nerd Font.
 - **Clipboard or shortcuts differ:** clipboard providers, modified-key reporting,
   mouse support, tmux, and SSH depend on the terminal environment. Use F1 and
@@ -196,12 +196,12 @@ in the [usage guide](docs/usage.md).
 - **Source build cannot start:** check the pinned Zig version and that a supported
   `nvim` executable is available. Release bundles use their own Neovim instead.
 - **Plugin compatibility:** plugins that require ownership of the outer terminal
-  UI may not work in Vide's embedded interface. Install plugins inside Vide's
+  UI may not work in Tuim's embedded interface. Install plugins inside Tuim's
   environment; see [plugin compatibility](docs/plugin-compatibility.md).
 
 ## Development
 
-Vide launches an embedded Neovim editor and a separate lightweight Neovim
+Tuim launches an embedded Neovim editor and a separate lightweight Neovim
 frontend for the integrated terminal. The shell starts when its panel is first
 opened. The Zig frontend handles input and renders native widgets alongside
 Neovim's UI events over MessagePack-RPC.

@@ -12,11 +12,11 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 def run(mode="ide"):
-    with tempfile.TemporaryDirectory(prefix="vide-hover-test-") as directory:
+    with tempfile.TemporaryDirectory(prefix="tuim-hover-test-") as directory:
         base = pathlib.Path(directory)
-        for name in ("config", "data/vide", "state", "cache"):
+        for name in ("config", "data/tuim", "state", "cache"):
             (base / name).mkdir(parents=True, exist_ok=True)
-        (base / "data/vide/settings.json").write_text(json.dumps({"mode": mode, "nerd_fonts": False}))
+        (base / "data/tuim/settings.json").write_text(json.dumps({"mode": mode, "nerd_fonts": False}))
         (base / "sample.txt").write_text("hover must not edit this file\n")
         (base / ".gitignore").write_text("config/\ndata/\nstate/\ncache/\ntmux.sock\n")
         subprocess.run(["git", "init", "-q", str(base)], check=True)
@@ -79,8 +79,8 @@ def run(mode="ide"):
 
         env = {"XDG_CONFIG_HOME": str(base / "config"), "XDG_DATA_HOME": str(base / "data"),
                "XDG_STATE_HOME": str(base / "state"), "XDG_CACHE_HOME": str(base / "cache"),
-               "VIDE_DISABLE_PLUGINS": "1", "VIDE_SKIP_ONBOARDING": "1", "TERM": "xterm-256color"}
-        launch = shlex.join(["env", *(f"{k}={v}" for k, v in env.items()), str(ROOT / "zig-out/bin/vide"), str(base / "sample.txt")])
+               "TUIM_DISABLE_PLUGINS": "1", "TUIM_SKIP_ONBOARDING": "1", "TERM": "xterm-256color"}
+        launch = shlex.join(["env", *(f"{k}={v}" for k, v in env.items()), str(ROOT / "zig-out/bin/tuim"), str(base / "sample.txt")])
         try:
             tmux("new-session", "-d", "-s", "ui", "-x", "100", "-y", "30", "-c", str(base), launch)
             wait_for(lambda: "EXPLORER" in screen(), "Explorer is not the startup view")

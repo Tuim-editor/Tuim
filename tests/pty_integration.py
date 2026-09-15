@@ -14,7 +14,7 @@ import termios
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-BINARY = pathlib.Path(os.environ.get("VIDE_TEST_BINARY", ROOT / "zig-out/bin/vide")).resolve()
+BINARY = pathlib.Path(os.environ.get("TUIM_TEST_BINARY", ROOT / "zig-out/bin/tuim")).resolve()
 ENTER_ALT = b"\x1b[?1049h"
 LEAVE_ALT = b"\x1b[?1049l"
 ENABLE_PASTE = b"\x1b[?2004h"
@@ -61,9 +61,9 @@ def terminate_child(pid, grace=1.0):
 
 
 def run_mode(mode):
-    with tempfile.TemporaryDirectory(prefix="vide-pty-") as temp:
+    with tempfile.TemporaryDirectory(prefix="tuim-pty-") as temp:
         base = pathlib.Path(temp)
-        data = base / "data/vide"
+        data = base / "data/tuim"
         data.mkdir(parents=True)
         (data / "settings.json").write_text(json.dumps({"mode": mode}), encoding="utf-8")
 
@@ -74,8 +74,8 @@ def run_mode(mode):
             "XDG_DATA_HOME": str(base / "data"),
             "XDG_STATE_HOME": str(base / "state"),
             "XDG_CACHE_HOME": str(base / "cache"),
-            "VIDE_DISABLE_PLUGINS": "1",
-            "VIDE_SKIP_ONBOARDING": "1",
+            "TUIM_DISABLE_PLUGINS": "1",
+            "TUIM_SKIP_ONBOARDING": "1",
             "TERM": "xterm-256color",
         })
         fd, slave_fd = pty.openpty()
@@ -121,10 +121,10 @@ def run_mode(mode):
         if waited == 0:
             status = terminate_child(pid)
             tail = bytes(output[-1000:]).decode("utf-8", errors="replace")
-            log_path = data / "vide.log"
+            log_path = data / "tuim.log"
             log = log_path.read_text(encoding="utf-8", errors="replace") if log_path.exists() else "<missing>"
             os.close(fd)
-            raise AssertionError(f"{mode}: Vide did not exit after Ctrl-Q; output tail: {tail!r}; log: {log}")
+            raise AssertionError(f"{mode}: Tuim did not exit after Ctrl-Q; output tail: {tail!r}; log: {log}")
 
         output.extend(read_available(fd, time.monotonic() + 0.25))
         restored = termios.tcgetattr(fd)
@@ -132,13 +132,13 @@ def run_mode(mode):
 
         if os.WIFEXITED(status):
             if os.WEXITSTATUS(status) != 0:
-                raise AssertionError(f"{mode}: Vide exited with code {os.WEXITSTATUS(status)}")
+                raise AssertionError(f"{mode}: Tuim exited with code {os.WEXITSTATUS(status)}")
         elif os.WIFSIGNALED(status):
             sig = os.WTERMSIG(status)
             if sig not in (signal.SIGTERM, signal.SIGHUP):
-                raise AssertionError(f"{mode}: Vide died from unexpected signal {sig}")
+                raise AssertionError(f"{mode}: Tuim died from unexpected signal {sig}")
         else:
-            raise AssertionError(f"{mode}: Vide exited abnormally: {status}")
+            raise AssertionError(f"{mode}: Tuim exited abnormally: {status}")
 
         assert restored == original, f"{mode}: terminal attributes were not restored"
         assert ENTER_ALT in output, f"{mode}: alternate screen was not enabled"
@@ -148,9 +148,9 @@ def run_mode(mode):
 
 
 def run_startup_failure():
-    with tempfile.TemporaryDirectory(prefix="vide-pty-failure-") as temp:
+    with tempfile.TemporaryDirectory(prefix="tuim-pty-failure-") as temp:
         env = os.environ.copy()
-        env.update({"HOME": temp, "PATH": "/nonexistent", "VIDE_DISABLE_PLUGINS": "1"})
+        env.update({"HOME": temp, "PATH": "/nonexistent", "TUIM_DISABLE_PLUGINS": "1"})
         fd, slave_fd = pty.openpty()
         child = subprocess.Popen(
             [str(BINARY)], stdin=slave_fd, stdout=slave_fd, stderr=slave_fd, env=env,
@@ -167,14 +167,14 @@ def run_startup_failure():
         assert status != 0, "missing Neovim should fail startup"
         assert restored == original, "startup failure left terminal attributes changed"
         assert LEAVE_ALT in output, "startup failure did not leave the alternate screen"
-        assert b"Vide could not start" in output, "startup failure was not actionable"
+        assert b"Tuim could not start" in output, "startup failure was not actionable"
 
 
 if __name__ == "__main__":
     if not BINARY.exists():
-        raise SystemExit("Build Vide before running PTY tests: zig build")
+        raise SystemExit("Build Tuim before running PTY tests: zig build")
     for current_mode in ("normal", "ide", "zen"):
         run_mode(current_mode)
-    if os.environ.get("VIDE_TEST_SKIP_STARTUP_FAILURE") != "1":
+    if os.environ.get("TUIM_TEST_SKIP_STARTUP_FAILURE") != "1":
         run_startup_failure()
-    print("Vide PTY integration tests passed")
+    print("Tuim PTY integration tests passed")

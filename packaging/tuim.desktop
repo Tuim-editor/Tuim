@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Tuim
+Comment=Terminal-native editor and IDE powered by Neovim
+Exec=tuim %F
+Icon=tuim
+Terminal=true
+Categories=Development;TextEditor;ConsoleOnly;
+MimeType=text/plain;
+Keywords=editor;ide;terminal;neovim;
