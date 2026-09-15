@@ -36,7 +36,7 @@ parser = Links()
 parser.feed((ROOT / "index.html").read_text(encoding="utf-8"))
 required_ids = {"main", "top", "modes", "features", "install", "support"}
 assert required_ids <= parser.ids
-assert parser.canonical == "https://rouboufy.github.io/Tuim/"
+assert parser.canonical == "https://tuim-editor.github.io/Tuim/"
 for key in ("description", "theme-color", "og:title", "og:description", "og:image", "twitter:card"):
     assert parser.meta.get(key), f"missing metadata: {key}"
 for attrs in parser.images:

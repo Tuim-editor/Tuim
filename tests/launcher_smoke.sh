@@ -3,6 +3,7 @@ set -eu
 
 ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 TEST_DIR=$(mktemp -d "${TMPDIR:-/tmp}/tuim-launcher.XXXXXX")
+TEST_DIR=$(cd "$TEST_DIR" && pwd -P)
 trap 'rm -rf "$TEST_DIR"' EXIT HUP INT TERM
 
 mkdir -p "$TEST_DIR/runtime/bin" "$TEST_DIR/runtime/lib/tuim/nvim/bin"
