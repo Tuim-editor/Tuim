@@ -7,7 +7,7 @@ It brings an Explorer, Git, an integrated shell, settings, and coding-assistant
 launchers into one keyboard- and mouse-accessible interface. Tuim uses its own
 configuration and plugin environment, separate from your regular Neovim setup.
 
-[Website](https://rouboufy.github.io/tuim/) ·
+[Website](https://rouboufy.github.io/Tuim/) ·
 **v0.3.0** · [Release notes](docs/releases/v0.3.0.md) · [Latest release](https://github.com/Rouboufy/tuim/releases/latest) ·
 [Usage guide](docs/usage.md) ·
 [Issues](https://github.com/Rouboufy/tuim/issues)
