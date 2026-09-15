@@ -29,7 +29,9 @@ differ. See [screenshot capture instructions](docs/screenshots/README.md).*
 - **Language tools:** completion, Treesitter, LSP, and diagnostics through the
   bundled Neovim configuration. Treesitter loads at startup; setup installs and
   verifies 19 default parsers. Lazy manages plugins; Mason manages language
-  servers and other tools. Initial installation requires network access.
+  servers and other tools. Open **Workspace → Language tools** or search for
+  **Language tools** with **F1** to manage them. Initial installation requires
+  network access.
 - **Coding assistants:** launch supported, installed CLIs from the AI panel and
   share editor context. Each assistant needs its own installation and authentication.
 - **Settings:** change themes, indentation, line numbers, and shortcuts in the
@@ -227,6 +229,46 @@ media, link, and platform checks. The website is static HTML/CSS; its
 Tagged `v*` releases trigger the [release workflow](.github/workflows/release.yml),
 which tests and builds native bundles and an AppImage, generates checksums, and
 publishes GitHub release assets. Verify target-platform behavior before tagging.
+
+## Acknowledgements
+
+Tuim is built on top of and inspired by an incredible open-source ecosystem. Special credit and gratitude go to:
+
+- **Core Engines & Languages:**
+  - [Neovim](https://neovim.io/) — the embedded editing engine, MessagePack-RPC, and terminal runtime.
+  - [Tree-sitter](https://tree-sitter.github.io/) — incremental parsing system and grammar generator.
+  - [Zig](https://ziglang.org/) — the systems language powering Tuim's frontend, TUI renderer, and event reactor.
+
+- **Bundled Neovim Plugins & Integrations:**
+  - [lazy.nvim](https://github.com/folke/lazy.nvim) (by Folke Lemaitre) — plugin management and lifecycle engine.
+  - [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) — Treesitter highlights, grammar management, and queries.
+  - [mason.nvim](https://github.com/williamboman/mason.nvim) & [mason-lspconfig.nvim](https://github.com/williamboman/mason-lspconfig.nvim) (by William Boman) — LSP, DAP, linter, and formatter package management.
+  - [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig) — standard LSP client configurations.
+  - [blink.cmp](https://github.com/Saghen/blink.cmp) (by Saghen) — high-performance autocompletion engine.
+  - [friendly-snippets](https://github.com/rafamadriz/friendly-snippets) (by Rafamadriz) — preconfigured snippet collections.
+  - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) & [plenary.nvim](https://github.com/nvim-lua/plenary.nvim) — interactive fuzzy finder and Lua utility libraries.
+  - [alpha-nvim](https://github.com/goolord/alpha-nvim) (by Goolord) — fast dashboard and greeting screen.
+  - [Harpoon](https://github.com/ThePrimeagen/harpoon) (by ThePrimeagen) — rapid file navigation and marks.
+
+- **Extension Marketplace:**
+  - [store.nvim.crawler](https://github.com/alex-popov-tech/store.nvim.crawler) (by Alex Popov) — plugin catalog data powering the Extensions shop.
+
+- **Color Schemes:**
+  - [vscode.nvim](https://github.com/Mofiqul/vscode.nvim) (by Mofiqul) — default VS Code Dark Modern theme.
+  - [tokyonight.nvim](https://github.com/folke/tokyonight.nvim) (by Folke Lemaitre)
+  - [catppuccin](https://github.com/catppuccin/nvim) (by Catppuccin)
+  - [gruvbox.nvim](https://github.com/ellisonleao/gruvbox.nvim) (by Ellison Leão)
+  - [nord.nvim](https://github.com/shaunsingh/nord.nvim) (by Shaun Singh)
+  - [cyberdream.nvim](https://github.com/scottmckendry/cyberdream.nvim) (by Scott McKendry)
+  - [rose-pine](https://github.com/rose-pine/neovim) (by Rosé Pine)
+  - [kanagawa.nvim](https://github.com/rebelot/kanagawa.nvim) (by Tommaso Cavazza)
+  - [nightfox.nvim](https://github.com/EdenEast/nightfox.nvim) (by EdenEast)
+  - [matteblack.nvim](https://github.com/tahayvr/matteblack.nvim) (by Taha Yavuz)
+
+- **System Tools & Assets:**
+  - [ripgrep](https://github.com/BurntSushi/ripgrep) (by Andrew Gallant) — fast project text searching.
+  - [Git](https://git-scm.com/) — version control engine.
+  - [Nerd Fonts](https://www.nerdfonts.com/) — developer icons and glyphs.
 
 ## License
 
