@@ -97,6 +97,33 @@ def run_mode(mode):
             assert intro_text not in startup, f"{mode}: Neovim intro flashed during startup"
 
         if mode != "zen":
+            selection_path = base / "terminal-selection.txt"
+            os.write(fd, b"\x14")  # Ctrl-T opens and focuses the terminal panel.
+            output.extend(read_available(fd, time.monotonic() + 0.5))
+            os.write(fd, b"printf 'terminal-selection-marker\\n'\r")
+            marker_deadline = time.monotonic() + 2.0
+            marker_pattern = rb"\x1b\[\d+;\d+Hterminal-selection-marker"
+            while re.search(marker_pattern, output) is None and time.monotonic() < marker_deadline:
+                output.extend(read_available(fd, min(marker_deadline, time.monotonic() + 0.1)))
+            assert re.search(marker_pattern, output) is not None, \
+                f"{mode}: terminal selection marker was not rendered; output tail: {bytes(output[-1200:])!r}"
+            os.write(fd, b"\x1c\x0e")  # Neovim terminal-normal: Ctrl-\\ Ctrl-N
+            output.extend(read_available(fd, time.monotonic() + 0.2))
+            os.write(fd, b"?terminal-selection-marker\r0v$\"ay")
+            output.extend(read_available(fd, time.monotonic() + 0.2))
+            command = f":call writefile([getreg('a')], '{selection_path}')\r\x1b"
+            os.write(fd, command.encode("utf-8"))
+            deadline = time.monotonic() + 2.0
+            while not selection_path.exists() and time.monotonic() < deadline:
+                output.extend(read_available(fd, min(deadline, time.monotonic() + 0.1)))
+            assert selection_path.exists(), \
+                f"{mode}: Ctrl-\\ Ctrl-N did not enter terminal-normal mode; output tail: {bytes(output[-1200:])!r}"
+            selection_text = selection_path.read_text(encoding="utf-8")
+            assert "terminal-selection-marker" in selection_text, \
+                f"{mode}: terminal visual selection was not yanked: {selection_text!r}"
+            os.write(fd, b"i")  # Return to the live shell after yanking.
+            output.extend(read_available(fd, time.monotonic() + 0.1))
+
             os.write(fd, "integration 界 🙂".encode("utf-8"))
             output.extend(read_available(fd, time.monotonic() + 0.3))
             os.write(fd, b"\r")

@@ -7,6 +7,9 @@ starts an isolated key-only OpenSSH server on loopback and runs the host suite
 through a forced remote PTY. Each run exercises
 all three modes, typing, newline, paste, mouse input, resize, shutdown,
 alternate-screen cleanup, and terminal-attribute restoration.
+The mouse column covers Neovim-routed terminal scrolling and selection as well
+as forwarding to terminal applications that enable mouse reporting; clipboard
+copy still depends on an available Neovim provider.
 
 | Environment | Last observed | Result | Notes |
 | --- | --- | --- | --- |

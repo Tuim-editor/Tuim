@@ -10,6 +10,7 @@ const app = @import("app.zig");
 const App = app.App;
 const workspace = @import("workspace.zig");
 const CompositionDamage = @import("invalidation.zig").CompositionDamage;
+const Explorer = @import("widgets/explorer.zig").Explorer;
 
 pub const CompositionPlan = struct {
     chrome: bool,
@@ -138,6 +139,41 @@ test "overlay closure and drawer shrink leave canonical base cells" {
     try std.testing.expectEqual(@as(u8, 'E'), ren.buf[1 * 6 + 5].char[0]);
 }
 
+test "explorer context menu is composed over the sidebar boundary and editor" {
+    var output = std.Io.Writer.Allocating.init(std.testing.allocator);
+    defer output.deinit();
+    var ren = try Renderer.init(std.testing.allocator, 32, 8, &output.writer);
+    defer ren.deinit(std.testing.allocator);
+
+    var explorer = Explorer.init(std.testing.allocator, std.testing.io);
+    defer explorer.deinit();
+    explorer.show_menu = true;
+    explorer.menu_x = 8;
+    explorer.menu_y = 1;
+
+    const colors = .{
+        .bg_sidebar = Color{ .index = 1 },
+        .bg_editor = Color{ .index = 2 },
+        .bg_accent = Color{ .index = 3 },
+        .fg_primary = Color{ .index = 4 },
+        .fg_secondary = Color{ .index = 5 },
+        .border_color = Color{ .index = 6 },
+        .fg_accent = Color{ .index = 7 },
+        .nerd_fonts = false,
+    };
+    const sidebar = Rect{ .x = 0, .y = 0, .w = 16, .h = 7 };
+    explorer.draw(&ren, sidebar, colors);
+
+    // These later base layers used to erase the part of the 16-column menu
+    // that extends beyond its x=8 origin and across the x=15 delimiter.
+    ren.drawRect(.{ .x = 16, .y = 0, .w = 16, .h = 7 }, "E", .none, .none);
+    ren.drawText(15, 1, "│", .none, .none, false, false);
+    explorer.drawOverlay(&ren, colors);
+
+    try std.testing.expectEqualStrings("─", ren.buf[1 * ren.width + 16].char[0..3]);
+    try std.testing.expectEqual(@as(u8, 'N'), ren.buf[2 * ren.width + 12].char[0]);
+}
+
 fn drawRect(ren: *Renderer, rect: Rect, char: []const u8, fg: Color, bg: Color) void {
     ren.drawRect(rect, char, fg, bg);
 }
@@ -150,7 +186,7 @@ fn overlayVisible(a: *App) bool {
     return a.ui_state.telescope_rects[0] != null or a.ui_state.telescope_rects[1] != null or
         a.settings_widget.is_open or a.mason_widget.is_open or a.lazy_widget.is_open or
         a.git_detailed_widget.is_open or a.extension_shop.is_open or a.show_split_menu or
-        a.activeNotice() != null or a.editor_context_menu.is_open or
+        a.activeNotice() != null or a.explorer.show_menu or a.editor_context_menu.is_open or
         a.bug_report.is_open or a.workspace.palette;
 }
 
@@ -630,6 +666,13 @@ pub fn drawWorkspace(a: *App, layout: Layout, damage: CompositionDamage, cursor_
     }
 
     if (plan.overlays and a.mode != .zen) {
+        if (a.show_file_tree and a.activity_bar.active_idx == 0) a.explorer.drawOverlay(a.ren, .{
+            .bg_editor = t.bg_editor,
+            .fg_primary = t.fg_primary,
+            .fg_accent = t.fg_accent,
+            .nerd_fonts = a.settings_widget.config.nerd_fonts,
+        });
+
         if (a.activeNotice()) |message| {
             const prefix = switch (a.notice_level) {
                 .info => "Info: ",

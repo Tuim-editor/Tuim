@@ -20,6 +20,16 @@ session alive. Its quiet footer provides a clickable return action. Normal's
 footer displays Neovim's current editing mode; IDE uses the same design with
 an IDE badge and modeless editing.
 
+Terminal scrollback uses Neovim's terminal-normal and Visual modes in both
+Normal and IDE workspaces. With the terminal focused, press `Ctrl+\`, then
+`Ctrl+N`; move with Vim motions, start a selection with `v`, `V`, or `Ctrl+V`,
+and press `y` to copy it. Press `i` or `a` to resume shell input. A left-button
+drag selects text the same way, while a click still focuses the live prompt and
+the wheel keeps scrolling. If a program has enabled terminal mouse reporting,
+Neovim forwards mouse events to that program; use the keyboard route to select
+its scrollback. Yanking uses the system clipboard when Neovim can find a
+clipboard provider.
+
 To create a file, press **Ctrl+N** and start typing (press `i` first in Normal
 mode). On the first **Ctrl+S**, enter a filename such as `notes.txt` and press
 **Enter**. Relative paths are saved in the current working directory. **Esc**
@@ -229,10 +239,12 @@ configuration is reported without aborting the editor. Recovery mode
 Tuim detects common project markers for Zig, Lua, Python, Rust,
 JavaScript/TypeScript, Go, and C/C++, then recommends only the matching Mason
 language servers. Projects without recognized markers remain manual rather
-than installing unrelated tools. Open Settings > Plugins > Mason Settings for
-the health summary, active servers, recommended packages, missing executables,
-and installed LSP/formatter/linter status. Missing or failed tooling is also
-reported through native notices with details in the Tuim log.
+than installing unrelated tools. Open **Workspace > Language tools**, or choose
+**Language tools** from the F1 command menu, for the health summary, active
+servers, recommended packages, missing executables, and installed
+LSP/formatter/linter status. **Settings > Plugins > Mason Settings** opens the
+same panel. Missing or failed tooling is also reported through native notices
+with details in the Tuim log.
 
 ### Accessibility and Terminal Fallbacks
 

@@ -1,5 +1,7 @@
 vim.g.tuim_is_terminal = true
 vim.opt.termguicolors = true
+vim.opt.mouse = 'a'
+vim.opt.clipboard:append('unnamedplus')
 vim.opt.laststatus = 0
 vim.opt.showmode = false
 vim.opt.ruler = false

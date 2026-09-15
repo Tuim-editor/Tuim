@@ -142,6 +142,7 @@ with a choice of editing style and an easy-to-find close action. Reopen it with
 | Search commands | `F1` |
 | Toggle workspace sidebar | `Ctrl+E` |
 | Toggle terminal panel | `Ctrl+T` |
+| Select terminal text | `Ctrl+\`, `Ctrl+N`, then `v` and motions; `y` copies |
 | Next / previous region | `F6` / `Shift+F6` |
 | Create a file | `Ctrl+N` |
 | Save | `Ctrl+S` |

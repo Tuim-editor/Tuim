@@ -24,6 +24,22 @@ fn zenSessionSaved(context: ?*anyopaque, completion: *Completion) anyerror!void 
 const Layout = @import("layout.zig").Layout;
 const settings = @import("widgets/settings.zig");
 
+test "terminal mouse forwards selection events to Neovim" {
+    const press = input.MouseEvent{ .col = 1, .row = 1, .button = .left, .action = .press };
+    const drag = input.MouseEvent{ .col = 2, .row = 1, .button = .left, .action = .move };
+    const release = input.MouseEvent{ .col = 2, .row = 1, .button = .left, .action = .release };
+    const motion = input.MouseEvent{ .col = 2, .row = 1, .button = .none, .action = .move };
+
+    try std.testing.expect(shouldForwardTerminalMouse(press));
+    try std.testing.expect(shouldForwardTerminalMouse(drag));
+    try std.testing.expect(shouldForwardTerminalMouse(release));
+    try std.testing.expect(!shouldForwardTerminalMouse(motion));
+}
+
+fn shouldForwardTerminalMouse(m: input.MouseEvent) bool {
+    return m.button != .none;
+}
+
 fn aiCommandMovesFocus(command: []const u8) bool {
     return std.mem.indexOf(u8, command, "OpenAITerminal") != null or
         std.mem.indexOf(u8, command, "FocusAITerminal") != null or
@@ -157,6 +173,15 @@ fn workspaceAction(a: *App, action: workspace.Action, layout: Layout) anyerror!v
             };
             if (action == .extensions) a.extension_shop.open() catch {};
         },
+        .language_tools => {
+            a.mason_widget.is_open = true;
+            a.mason_widget.selected_tab = .lsp;
+            a.mason_widget.search_len = 0;
+            a.mason_widget.is_searching = false;
+            a.mason_widget.selected_idx = 0;
+            a.mason_widget.scroll_offset = 0;
+            a.mason_widget.refresh(a.rpc);
+        },
         .settings => openSettings(a, false),
         .keys => openSettings(a, true),
         .help => {
@@ -203,12 +228,12 @@ fn workspaceAction(a: *App, action: workspace.Action, layout: Layout) anyerror!v
 }
 
 fn workspaceItem(a: *App, index: usize, layout: Layout) !void {
-    if (index < a.tabs.items.len) workspace.selectBuffer(a, index) else if (index - a.tabs.items.len < 8) try workspaceAction(a, workspace.actions[index - a.tabs.items.len], layout);
+    if (index < a.tabs.items.len) workspace.selectBuffer(a, index) else if (index - a.tabs.items.len < workspace.overview_action_count) try workspaceAction(a, workspace.actions[index - a.tabs.items.len], layout);
 }
 
 pub fn handleKey(a: *App, k: input.KeyEvent, layout: Layout) !bool {
     if (a.terminal_focus and !a.workspace.palette and !a.settings_widget.is_open) {
-        if (std.mem.eql(u8, k.raw, "\x1bv") or std.mem.eql(u8, k.raw, "\x1c")) { // Alt+v or Ctrl+\ -> Vertical Split
+        if (std.mem.eql(u8, k.raw, "\x1bv")) { // Alt+v -> Vertical Split
             var cmd_p = try a.allocator.alloc(Value, 1);
             defer a.allocator.free(cmd_p);
             cmd_p[0] = .{ .string = "vnew | terminal | startinsert" };
@@ -708,7 +733,7 @@ pub fn handleKey(a: *App, k: input.KeyEvent, layout: Layout) !bool {
         a.updateLayoutTree();
         a.invalidations.damageAll();
         return true;
-    } else if (new_file) {
+    } else if (new_file and !a.terminal_focus) {
         a.sidebar_focus = false;
         a.terminal_focus = false;
         const cmd_p = [1]Value{.{ .string = "_G.tuim_close_floating_windows(); vim.cmd('enew')" }};
@@ -752,7 +777,7 @@ pub fn handleKey(a: *App, k: input.KeyEvent, layout: Layout) !bool {
                 }
                 return true;
             }
-            if (std.mem.eql(u8, nk, "j") or std.mem.eql(u8, nk, "<Down>")) a.workspace.selected = @min(a.workspace.selected + 1, a.tabs.items.len + 7) else if (std.mem.eql(u8, nk, "k") or std.mem.eql(u8, nk, "<Up>")) a.workspace.selected -|= 1 else if (std.mem.eql(u8, nk, "<Home>")) a.workspace.selected = 0 else if (std.mem.eql(u8, nk, "<End>")) a.workspace.selected = a.tabs.items.len + 7 else if (std.mem.eql(u8, nk, "<Enter>") or std.mem.eql(u8, nk, "l")) try workspaceItem(a, a.workspace.selected, layout) else if (std.mem.eql(u8, nk, "<Esc>") or std.mem.eql(u8, nk, "<Tab>")) a.sidebar_focus = false;
+            if (std.mem.eql(u8, nk, "j") or std.mem.eql(u8, nk, "<Down>")) a.workspace.selected = @min(a.workspace.selected + 1, a.tabs.items.len + workspace.overview_action_count - 1) else if (std.mem.eql(u8, nk, "k") or std.mem.eql(u8, nk, "<Up>")) a.workspace.selected -|= 1 else if (std.mem.eql(u8, nk, "<Home>")) a.workspace.selected = 0 else if (std.mem.eql(u8, nk, "<End>")) a.workspace.selected = a.tabs.items.len + workspace.overview_action_count - 1 else if (std.mem.eql(u8, nk, "<Enter>") or std.mem.eql(u8, nk, "l")) try workspaceItem(a, a.workspace.selected, layout) else if (std.mem.eql(u8, nk, "<Esc>") or std.mem.eql(u8, nk, "<Tab>")) a.sidebar_focus = false;
             a.invalidations.damageAll();
             return true;
         }
@@ -1231,9 +1256,9 @@ pub fn handleMouse(a: *App, m: input.MouseEvent, layout: Layout) !void {
             if (a.workspace.overview and m.row >= layout.file_tree.y and m.row < layout.file_tree.y + layout.file_tree.h) {
                 a.sidebar_focus = true;
                 a.terminal_focus = false;
-                if (m.button == .wheel_down) a.workspace.selected = @min(a.workspace.selected + 1, a.tabs.items.len + 7) else if (m.button == .wheel_up) a.workspace.selected -|= 1 else if (m.button == .left) {
+                if (m.button == .wheel_down) a.workspace.selected = @min(a.workspace.selected + 1, a.tabs.items.len + workspace.overview_action_count - 1) else if (m.button == .wheel_up) a.workspace.selected -|= 1 else if (m.button == .left) {
                     const row = m.row - layout.file_tree.y + a.workspace.scroll;
-                    for (0..a.tabs.items.len + 8) |i| if (workspace.itemRow(i, a.tabs.items.len) == row) {
+                    for (0..a.tabs.items.len + workspace.overview_action_count) |i| if (workspace.itemRow(i, a.tabs.items.len) == row) {
                         a.workspace.selected = i;
                         try workspaceItem(a, i, layout);
                         break;
@@ -1505,7 +1530,7 @@ pub fn handleMouse(a: *App, m: input.MouseEvent, layout: Layout) !void {
     {
         if (a.active_terminal_panel_idx == 0) {
             if (m.action == .press or m.action == .release) a.terminal_focus = true;
-            if (m.button == .wheel_up or m.button == .wheel_down) {
+            if (shouldForwardTerminalMouse(m)) {
                 nvim_helpers.sendMouseEvent(a.rpc_term, a.allocator, m, m.col - layout.panel.?.x, m.row - layout.panel.?.y - 1);
             }
         } else if (a.active_terminal_panel_idx == 1) {

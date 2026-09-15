@@ -829,6 +829,10 @@ fn runNvimSession(
             _ = try nvim_helpers.processNvimEvents(rpc_term);
         }
 
+        const editor_completions_dispatched = rpc.takeCompletionsDispatched();
+        const terminal_completions_dispatched = rpc_term.takeCompletionsDispatched();
+        if (editor_completions_dispatched or terminal_completions_dispatched) app.invalidations.damageAll();
+
         if (first_frame) std.log.info("Drawing first frame", .{});
         if (tracked_cycle) try phases.enter(.composition);
         var composition_timer = metrics.ScopedTimer.start(&metrics.global, &metrics.global.composition);
@@ -870,9 +874,10 @@ fn runNvimSession(
             first_frame = false;
         }
 
+        const buffered_input = input.hasPendingEvent();
         const buffered_rpc_work = rpc.wantsAsyncReadProgress() or rpc_term.wantsAsyncReadProgress();
         const pending_state = app.settings_widget.needs_apply or ui_state.theme_changed;
-        const timeout: i32 = if (input.sigwinch_received.load(.monotonic) or buffered_rpc_work or pending_state) 0 else 1000;
+        const timeout: i32 = if (input.sigwinch_received.load(.monotonic) or buffered_input or buffered_rpc_work or pending_state) 0 else 1000;
         if (editor_write_token) |token| try reactor.update(token, .{ .write = rpc.wantsAsyncWrite() });
         if (terminal_write_token) |token| try reactor.update(token, .{ .write = rpc_term.wantsAsyncWrite() });
         try phases.enter(.readiness_collection);
@@ -937,7 +942,7 @@ fn runNvimSession(
         try phases.enter(.normalized_event_dispatch);
         if (readiness.task_completion and drainGitRefreshes(alloc, background.?, &git_owners, &git_panel)) app.invalidations.damageAll();
         var normalized_input: ?input.Event = null;
-        if (readiness.terminal_input) {
+        if (readiness.terminal_input or input.hasPendingEvent()) {
             var input_timer = metrics.ScopedTimer.start(&metrics.global, &metrics.global.input_decode);
             normalized_input = try input.readEvent(term.tty_fd, &seq_buf, alloc);
             input_timer.stop();

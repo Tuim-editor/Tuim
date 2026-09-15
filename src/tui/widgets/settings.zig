@@ -59,6 +59,7 @@ pub const Keybindings = struct {
     problems: []const u8 = "",
     ai_assistants: []const u8 = "",
     extensions: []const u8 = "",
+    language_tools: []const u8 = "",
     settings: []const u8 = "",
     keyboard_shortcuts: []const u8 = "",
     help: []const u8 = "",

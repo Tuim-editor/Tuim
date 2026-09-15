@@ -52,6 +52,10 @@ pub const Event = union(enum) {
 
 pub var unget_byte: ?u8 = null;
 
+pub fn hasPendingEvent() bool {
+    return unget_byte != null;
+}
+
 fn tryReadByte(fd: posix.fd_t) !?u8 {
     if (unget_byte) |b| {
         unget_byte = null;
@@ -276,6 +280,12 @@ pub fn readEvent(fd: posix.fd_t, seq_buf: []u8, allocator: std.mem.Allocator) !E
     }
 
     return Event{ .key = .{ .char = first_byte, .raw = seq_buf[0..len] } };
+}
+
+test "buffered control byte remains dispatchable without fd readiness" {
+    unget_byte = '\r';
+    defer unget_byte = null;
+    try std.testing.expect(hasPendingEvent());
 }
 
 test "passive SGR motion is distinct from a left button drag" {

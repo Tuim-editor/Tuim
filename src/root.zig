@@ -1,3 +1,5 @@
+const std = @import("std");
+
 test "all core modules compile and register their tests" {
     _ = @import("metrics.zig");
     _ = @import("reactor.zig");
@@ -22,4 +24,15 @@ test "all core modules compile and register their tests" {
     _ = @import("tui/widgets/ai_panel.zig");
     _ = @import("tui/widgets/bug_report.zig");
     _ = @import("tui/widgets/editor_context_menu.zig");
+}
+
+test "language tools is a workspace entry and command" {
+    const workspace = @import("tui/workspace.zig");
+    try std.testing.expectEqualStrings("Language tools", workspace.labels[@intFromEnum(workspace.Action.language_tools)]);
+    try std.testing.expect(@intFromEnum(workspace.Action.language_tools) < workspace.overview_action_count);
+    var state = workspace.State{};
+    @memcpy(state.query[0..14], "language tools");
+    state.query_len = 14;
+    var results: [workspace.actions.len]workspace.Action = undefined;
+    try std.testing.expectEqualSlices(workspace.Action, &.{.language_tools}, workspace.filtered(&state, &results));
 }

@@ -5,9 +5,10 @@ const Rect = @import("layout.zig").Rect;
 const Value = @import("../nvim/msgpack.zig").Value;
 const settings = @import("widgets/settings.zig");
 
-pub const Action = enum { find_file, explorer, terminal, git, problems, ai, extensions, settings, keys, help, save, new_file, split_right, split_down, close_file, zen, next_region, sidebar, report, buffers, commands, terminal_right, search_project };
+pub const Action = enum { find_file, explorer, terminal, git, problems, ai, extensions, language_tools, settings, keys, help, save, new_file, split_right, split_down, close_file, zen, next_region, sidebar, report, buffers, commands, terminal_right, search_project };
 pub const actions = std.enums.values(Action);
-pub const labels = [_][]const u8{ "Find file", "Explorer", "Terminal", "Git", "Problems", "AI assistants", "Extensions", "Settings", "Keyboard shortcuts", "Help", "Save file", "New file", "Split right", "Split down", "Close buffer", "Toggle zen", "Next region", "Toggle sidebar", "Report bug", "Switch buffers", "Command menu", "Open terminal right", "Search project" };
+pub const labels = [_][]const u8{ "Find file", "Explorer", "Terminal", "Git", "Problems", "AI assistants", "Extensions", "Language tools", "Settings", "Keyboard shortcuts", "Help", "Save file", "New file", "Split right", "Split down", "Close buffer", "Toggle zen", "Next region", "Toggle sidebar", "Report bug", "Switch buffers", "Command menu", "Open terminal right", "Search project" };
+pub const overview_action_count: usize = @intFromEnum(Action.settings) + 1;
 pub const State = struct {
     overview: bool = false,
     selected: usize = 0,
@@ -130,6 +131,7 @@ pub fn bindingField(action: Action) settings.Keybindings.Field {
         .problems => .problems,
         .ai => .ai_assistants,
         .extensions => .extensions,
+        .language_tools => .language_tools,
         .settings => .settings,
         .keys => .keyboard_shortcuts,
         .help => .help,
@@ -184,7 +186,7 @@ pub fn itemRow(index: usize, files: usize) usize {
 }
 
 pub fn ensureSelection(a: *App, rect: Rect) void {
-    a.workspace.selected = @min(a.workspace.selected, a.tabs.items.len + 8 - 1);
+    a.workspace.selected = @min(a.workspace.selected, a.tabs.items.len + overview_action_count - 1);
     const row = itemRow(a.workspace.selected, a.tabs.items.len);
     if (row < a.workspace.scroll) a.workspace.scroll = row;
     if (rect.h > 0 and row >= a.workspace.scroll + rect.h) a.workspace.scroll = row - rect.h + 1;
@@ -215,7 +217,7 @@ pub fn drawSidebar(a: *App, layout: Layout) void {
     if (!a.workspace.overview) return;
     a.ren.drawRect(rect, " ", t.fg_primary, t.bg_sidebar);
     const files = a.tabs.items.len;
-    const total = files + 8;
+    const total = files + overview_action_count;
     if (a.sidebar_focus) ensureSelection(a, rect);
     const max_scroll = (itemRow(total - 1, files) + 1) -| rect.h;
     a.workspace.scroll = @min(a.workspace.scroll, max_scroll);

@@ -162,10 +162,18 @@ install_dependencies() {
 if [ ${#MISSING[@]} -gt 0 ]; then
     echo "Missing dependencies: ${MISSING[*]}"
     if ! $ASSUME_YES && ! $DRY_RUN; then
-        if ! { read -r -p "Install missing system dependencies? [y/N] " reply </dev/tty; } 2>/dev/null; then
+        if ! exec 3<>/dev/tty 2>/dev/null; then
             echo "No interactive terminal. Use --yes to install missing system dependencies." >&2; exit 1
         fi
-        [[ "$reply" =~ ^[Yy]$ ]] || exit 1
+        printf 'Install system dependencies now? [y/N] ' >&3
+        if ! IFS= read -r reply <&3; then
+            exec 3>&-
+            echo "Could not read dependency installation consent. Use --yes or install dependencies manually." >&2; exit 1
+        fi
+        exec 3>&-
+        if [[ ! "$reply" =~ ^[Yy]$ ]]; then
+            echo "Dependency installation declined. Install the missing dependencies manually or rerun with --yes." >&2; exit 1
+        fi
     fi
     install_dependencies
     if ! $DRY_RUN; then
