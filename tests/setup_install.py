@@ -194,6 +194,7 @@ exec "$@"
     status, output, package_calls = piped_install_with_tty('piped-dependency-decline', 'n')
     assert status != 0
     assert 'Install system dependencies now? [y/N] ' in output, output
+    assert 'Dependency installation declined.' in output, output
     assert not package_calls.exists(), 'declining consent must not invoke the package manager'
 
     manager_expectations = {
@@ -276,6 +277,7 @@ if {install_test}; then touch {str(installed)!r}; fi
 
     _, result = install('no-tty', args=(), pipe=True, overrides={'TUIM_TEST_MISSING': 'git'})
     assert result.returncode != 0 and 'Use --yes' in result.stderr
+    assert '/dev/tty' not in result.stderr, result.stderr
 
     project = base / 'source project'
     project.mkdir()

@@ -162,7 +162,7 @@ install_dependencies() {
 if [ ${#MISSING[@]} -gt 0 ]; then
     echo "Missing dependencies: ${MISSING[*]}"
     if ! $ASSUME_YES && ! $DRY_RUN; then
-        if ! exec 3<>/dev/tty 2>/dev/null; then
+        if ! { exec 3<>/dev/tty; } 2>/dev/null; then
             echo "No interactive terminal. Use --yes to install missing system dependencies." >&2; exit 1
         fi
         printf 'Install system dependencies now? [y/N] ' >&3

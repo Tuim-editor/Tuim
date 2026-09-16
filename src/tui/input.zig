@@ -286,6 +286,11 @@ test "buffered control byte remains dispatchable without fd readiness" {
     unget_byte = '\r';
     defer unget_byte = null;
     try std.testing.expect(hasPendingEvent());
+    var sequence: [16]u8 = undefined;
+    const event = try readEvent(-1, &sequence, std.testing.allocator);
+    try std.testing.expectEqual(@as(u8, '\r'), event.key.char);
+    try std.testing.expectEqualStrings("\r", event.key.raw);
+    try std.testing.expect(!hasPendingEvent());
 }
 
 test "passive SGR motion is distinct from a left button drag" {

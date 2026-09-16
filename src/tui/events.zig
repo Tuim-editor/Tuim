@@ -21,24 +21,9 @@ fn zenSessionSaved(context: ?*anyopaque, completion: *Completion) anyerror!void 
     const application: *App = @ptrCast(@alignCast(context.?));
     if (!async_effects.applyDeferredExit(&application.deferred_exit, .zen_handoff, completion)) application.notify(.failure, "Unable to save the Zen handoff session.", .{});
 }
-const Layout = @import("layout.zig").Layout;
+const layout_mod = @import("layout.zig");
+const Layout = layout_mod.Layout;
 const settings = @import("widgets/settings.zig");
-
-test "terminal mouse forwards selection events to Neovim" {
-    const press = input.MouseEvent{ .col = 1, .row = 1, .button = .left, .action = .press };
-    const drag = input.MouseEvent{ .col = 2, .row = 1, .button = .left, .action = .move };
-    const release = input.MouseEvent{ .col = 2, .row = 1, .button = .left, .action = .release };
-    const motion = input.MouseEvent{ .col = 2, .row = 1, .button = .none, .action = .move };
-
-    try std.testing.expect(shouldForwardTerminalMouse(press));
-    try std.testing.expect(shouldForwardTerminalMouse(drag));
-    try std.testing.expect(shouldForwardTerminalMouse(release));
-    try std.testing.expect(!shouldForwardTerminalMouse(motion));
-}
-
-fn shouldForwardTerminalMouse(m: input.MouseEvent) bool {
-    return m.button != .none;
-}
 
 fn aiCommandMovesFocus(command: []const u8) bool {
     return std.mem.indexOf(u8, command, "OpenAITerminal") != null or
@@ -146,6 +131,9 @@ fn workspaceAction(a: *App, action: workspace.Action, layout: Layout) anyerror!v
         else => null,
     };
     if (key) |raw| {
+        // Palette actions are explicit workspace commands, even when the live
+        // terminal had focus. Direct Ctrl+N still falls through to Neovim.
+        if (action == .new_file) a.terminal_focus = false;
         _ = try handleKey(a, .{ .char = 0, .raw = raw }, layout);
     } else switch (action) {
         .find_file => {
@@ -233,18 +221,13 @@ fn workspaceItem(a: *App, index: usize, layout: Layout) !void {
 
 pub fn handleKey(a: *App, k: input.KeyEvent, layout: Layout) !bool {
     if (a.terminal_focus and !a.workspace.palette and !a.settings_widget.is_open) {
-        if (std.mem.eql(u8, k.raw, "\x1bv")) { // Alt+v -> Vertical Split
+        if (terminalPanelShortcut(k.raw)) |shortcut| {
             var cmd_p = try a.allocator.alloc(Value, 1);
             defer a.allocator.free(cmd_p);
-            cmd_p[0] = .{ .string = "vnew | terminal | startinsert" };
-            _ = try a.rpc_term.requestAsyncWithHandler("nvim_command", cmd_p, a, terminalAdded);
-            a.invalidations.damageAll();
-            return true;
-        }
-        if (std.mem.eql(u8, k.raw, "\x1bs")) { // Alt+s -> Horizontal Split
-            var cmd_p = try a.allocator.alloc(Value, 1);
-            defer a.allocator.free(cmd_p);
-            cmd_p[0] = .{ .string = "new | terminal | startinsert" };
+            cmd_p[0] = .{ .string = switch (shortcut) {
+                .vertical_split => "vnew | terminal | startinsert",
+                .horizontal_split => "new | terminal | startinsert",
+            } };
             _ = try a.rpc_term.requestAsyncWithHandler("nvim_command", cmd_p, a, terminalAdded);
             a.invalidations.damageAll();
             return true;
@@ -1530,9 +1513,7 @@ pub fn handleMouse(a: *App, m: input.MouseEvent, layout: Layout) !void {
     {
         if (a.active_terminal_panel_idx == 0) {
             if (m.action == .press or m.action == .release) a.terminal_focus = true;
-            if (shouldForwardTerminalMouse(m)) {
-                nvim_helpers.sendMouseEvent(a.rpc_term, a.allocator, m, m.col - layout.panel.?.x, m.row - layout.panel.?.y - 1);
-            }
+            dispatchTerminalMouse(TerminalMouseTarget{ .rpc = a.rpc_term, .allocator = a.allocator }, m, layout.panel.?, sendTerminalMouse);
         } else if (a.active_terminal_panel_idx == 1) {
             if (m.action == .press and m.button == .wheel_up) a.debug_console.handleScroll(-1);
             if (m.action == .press and m.button == .wheel_down) a.debug_console.handleScroll(1);
@@ -1556,4 +1537,61 @@ pub fn handleMouse(a: *App, m: input.MouseEvent, layout: Layout) !void {
     } else {
         if (m.action == .press) a.terminal_focus = false;
     }
+}
+
+const TerminalPanelShortcut = enum { vertical_split, horizontal_split };
+
+fn terminalPanelShortcut(raw: []const u8) ?TerminalPanelShortcut {
+    if (std.mem.eql(u8, raw, "\x1bv")) return .vertical_split;
+    if (std.mem.eql(u8, raw, "\x1bs")) return .horizontal_split;
+    return null;
+}
+
+test "terminal-normal prefix is forwarded instead of becoming a Tuim shortcut" {
+    try std.testing.expectEqual(TerminalPanelShortcut.vertical_split, terminalPanelShortcut("\x1bv").?);
+    try std.testing.expectEqual(TerminalPanelShortcut.horizontal_split, terminalPanelShortcut("\x1bs").?);
+    try std.testing.expect(terminalPanelShortcut("\x1c") == null);
+}
+
+const TerminalMouseTarget = struct {
+    rpc: *@import("../nvim/rpc.zig").RpcClient,
+    allocator: std.mem.Allocator,
+};
+
+fn sendTerminalMouse(target: TerminalMouseTarget, m: input.MouseEvent, col: u16, row: u16) void {
+    nvim_helpers.sendMouseEvent(target.rpc, target.allocator, m, col, row);
+}
+
+fn dispatchTerminalMouse(context: anytype, m: input.MouseEvent, panel: layout_mod.Rect, comptime send: anytype) void {
+    if (m.button == .none) return;
+    send(context, m, m.col - panel.x, m.row - panel.y - 1);
+}
+
+test "terminal panel dispatches press drag and release but ignores passive motion" {
+    const Recorder = struct {
+        events: [3]input.MouseEvent = undefined,
+        cols: [3]u16 = undefined,
+        rows: [3]u16 = undefined,
+        count: usize = 0,
+
+        fn record(self: *@This(), m: input.MouseEvent, col: u16, row: u16) void {
+            self.events[self.count] = m;
+            self.cols[self.count] = col;
+            self.rows[self.count] = row;
+            self.count += 1;
+        }
+    };
+    const panel = layout_mod.Rect{ .x = 10, .y = 5, .w = 20, .h = 8 };
+    var recorder = Recorder{};
+    dispatchTerminalMouse(&recorder, .{ .col = 11, .row = 6, .button = .left, .action = .press }, panel, Recorder.record);
+    dispatchTerminalMouse(&recorder, .{ .col = 14, .row = 7, .button = .left, .action = .move }, panel, Recorder.record);
+    dispatchTerminalMouse(&recorder, .{ .col = 14, .row = 7, .button = .left, .action = .release }, panel, Recorder.record);
+    dispatchTerminalMouse(&recorder, .{ .col = 15, .row = 8, .button = .none, .action = .move }, panel, Recorder.record);
+
+    try std.testing.expectEqual(@as(usize, 3), recorder.count);
+    try std.testing.expectEqual(input.MouseAction.press, recorder.events[0].action);
+    try std.testing.expectEqual(input.MouseAction.move, recorder.events[1].action);
+    try std.testing.expectEqual(input.MouseAction.release, recorder.events[2].action);
+    try std.testing.expectEqual(@as(u16, 4), recorder.cols[2]);
+    try std.testing.expectEqual(@as(u16, 1), recorder.rows[2]);
 }

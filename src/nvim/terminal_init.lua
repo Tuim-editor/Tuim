@@ -1,7 +1,34 @@
 vim.g.tuim_is_terminal = true
 vim.opt.termguicolors = true
 vim.opt.mouse = 'a'
-vim.opt.clipboard:append('unnamedplus')
+local clipboard_commands = {
+    { 'wl-copy', 'wl-paste' },
+    { 'xclip' },
+    { 'xsel' },
+    { 'pbcopy', 'pbpaste' },
+    { 'lemonade' },
+    { 'doitclient' },
+    { 'termux-clipboard-set', 'termux-clipboard-get' },
+    { 'clip.exe', 'powershell.exe' },
+}
+local clipboard_available = false
+for _, commands in ipairs(clipboard_commands) do
+    local available = true
+    for _, command in ipairs(commands) do
+        if vim.fn.executable(command) ~= 1 then
+            available = false
+            break
+        end
+    end
+    if available then
+        clipboard_available = true
+        break
+    end
+end
+vim.g.tuim_terminal_clipboard_provider = clipboard_available
+if clipboard_available then
+    vim.opt.clipboard:append('unnamedplus')
+end
 vim.opt.laststatus = 0
 vim.opt.showmode = false
 vim.opt.ruler = false

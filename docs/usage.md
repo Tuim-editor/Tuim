@@ -31,7 +31,9 @@ its scrollback. Yanking uses the system clipboard when Neovim can find a
 clipboard provider.
 
 To create a file, press **Ctrl+N** and start typing (press `i` first in Normal
-mode). On the first **Ctrl+S**, enter a filename such as `notes.txt` and press
+mode). When the terminal is focused, use **F1 > New file** or focus the editor
+first because `Ctrl+N` belongs to Neovim's terminal mode there. On the first
+**Ctrl+S**, enter a filename such as `notes.txt` and press
 **Enter**. Relative paths are saved in the current working directory. **Esc**
 cancels naming without discarding your text. Later saves use the same name.
 

@@ -148,6 +148,8 @@ def run(capture=None, mode="normal"):
             send("Enter")
             wait_for(lambda s: "Next Region" in s and "Save File" in s, "Shortcut editor did not open")
             send("Right")
+            # focus_next is the tenth and final binding, so index 0 requires
+            # nine Down events. The buffered-input unit test pins exact-once delivery.
             send(*(["Down"] * 9), "Enter", "F2", "C-s")
             wait_for(lambda _: json.loads((base / "data/tuim/settings.json").read_text()).get("keybindings", {}).get("focus_next") == "<F2>", "Keyboard-only binding edit/save did not persist")
             wait_for(lambda s: "Keybindings / Enter" not in s, "Settings did not close")
@@ -160,6 +162,10 @@ def run(capture=None, mode="normal"):
 
             palette("terminal")
             wait_for(lambda s: "Terminal" in s.splitlines()[-1], "Terminal did not take focus")
+            palette("new file")
+            wait_for(lambda s: "[No Name]" in s and "Editor" in s.splitlines()[-1], "New file command did not leave terminal focus")
+            send("F6", "F6")
+            wait_for(lambda s: "Terminal" in s.splitlines()[-1], "Terminal did not retake focus")
             text("export TUIM_WORKSPACE_TEST=alive")
             send("Enter")
             time.sleep(0.2)

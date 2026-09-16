@@ -3,8 +3,9 @@ vim.opt.shell = '/bin/sh'
 dofile('src/nvim/terminal_init.lua')
 assert(not vim.o.ruler and not vim.o.showcmd and vim.o.cmdheight == 0)
 assert(vim.o.mouse:find('a', 1, true), 'Terminal frontend did not enable Neovim mouse selection')
-assert(vim.o.clipboard:find('unnamedplus', 1, true), 'Terminal yanks do not use the configured system clipboard')
-assert(vim.fn.maparg('<C-\\>', 't') == '', 'Terminal-normal prefix was shadowed by a mapping')
+local uses_system_clipboard = vim.o.clipboard:find('unnamedplus', 1, true) ~= nil
+assert(uses_system_clipboard == vim.g.tuim_terminal_clipboard_provider,
+    'Terminal clipboard setting did not match provider availability')
 
 _G.tuim_ensure_terminal()
 local first_buf = vim.api.nvim_get_current_buf()

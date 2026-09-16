@@ -144,13 +144,14 @@ with a choice of editing style and an easy-to-find close action. Reopen it with
 | Toggle terminal panel | `Ctrl+T` |
 | Select terminal text | `Ctrl+\`, `Ctrl+N`, then `v` and motions; `y` copies |
 | Next / previous region | `F6` / `Shift+F6` |
-| Create a file | `Ctrl+N` |
+| Create a file | `Ctrl+N` (except while the terminal is focused) |
 | Save | `Ctrl+S` |
 | Find a file | `Ctrl+P` |
 | Search project text (ripgrep) | `Alt+G` |
 | Toggle Zen / previous mode | `F11` |
 
-To create a file, press **Ctrl+N**, then type (`i` first in Normal mode). On the
+To create a file, press **Ctrl+N**, then type (`i` first in Normal mode). When
+the terminal is focused, use **F1 > New file** or focus the editor first. On the
 first **Ctrl+S**, enter a filename and press **Enter**. Relative paths use the
 working directory. **Esc** cancels naming without discarding your text.
 

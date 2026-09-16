@@ -186,8 +186,13 @@ fn overlayVisible(a: *App) bool {
     return a.ui_state.telescope_rects[0] != null or a.ui_state.telescope_rects[1] != null or
         a.settings_widget.is_open or a.mason_widget.is_open or a.lazy_widget.is_open or
         a.git_detailed_widget.is_open or a.extension_shop.is_open or a.show_split_menu or
-        a.activeNotice() != null or a.explorer.show_menu or a.editor_context_menu.is_open or
+        a.activeNotice() != null or explorerOverlayVisible(a) or a.editor_context_menu.is_open or
         a.bug_report.is_open or a.workspace.palette;
+}
+
+fn explorerOverlayVisible(a: *const App) bool {
+    return a.mode != .zen and a.show_file_tree and !a.workspace.overview and
+        a.activity_bar.active_idx == 0 and a.explorer.show_menu;
 }
 
 pub fn drawWorkspace(a: *App, layout: Layout, damage: CompositionDamage, cursor_damage: bool) void {
@@ -666,7 +671,7 @@ pub fn drawWorkspace(a: *App, layout: Layout, damage: CompositionDamage, cursor_
     }
 
     if (plan.overlays and a.mode != .zen) {
-        if (a.show_file_tree and a.activity_bar.active_idx == 0) a.explorer.drawOverlay(a.ren, .{
+        if (explorerOverlayVisible(a)) a.explorer.drawOverlay(a.ren, .{
             .bg_editor = t.bg_editor,
             .fg_primary = t.fg_primary,
             .fg_accent = t.fg_accent,
