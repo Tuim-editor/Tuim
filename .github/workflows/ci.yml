@@ -29,6 +29,7 @@ jobs:
       - name: Run pseudo-terminal integration tests
         run: |
           zig build
+          python3 tests/controlling_tty.py
           python3 tests/pty_integration.py
           python3 tests/default_runtime.py
       - name: Test plugin management and Extensions UI
@@ -69,6 +70,29 @@ jobs:
           version: 0.16.0
       - name: Build ${{ matrix.target }}
         run: zig build -Dtarget=${{ matrix.target }} -Doptimize=ReleaseSafe
+
+  macos-input:
+    # Blocking, unlike macos-smoke: a keyboard-input regression on macOS is
+    # invisible to the Linux jobs, because poll() only misreports /dev/tty there.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2.2.1
+        with:
+          version: 0.16.0
+      - name: Install Neovim
+        run: brew list neovim >/dev/null 2>&1 || brew install neovim
+      - name: Build
+        run: zig build
+      - name: Test input with a controlling terminal
+        timeout-minutes: 5
+        run: |
+          # One retry: the startup hang tracked in #68 can strike any macOS run
+          # and must not block merges until it is fixed.
+          python3 tests/controlling_tty.py || {
+            echo "first attempt failed, retrying once (see issue #68)"
+            python3 tests/controlling_tty.py
+          }
 
   macos-smoke:
     # macOS end-to-end behavior still needs broader verification. Keep collecting

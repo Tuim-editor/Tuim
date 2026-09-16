@@ -209,7 +209,7 @@ pub fn drawSidebar(a: *App, layout: Layout) void {
     const t = &chrome;
     a.ren.drawRect(.{ .x = 0, .y = 0, .w = rect.w, .h = @min(2, layout.total.h) }, " ", t.fg_primary, t.bg_sidebar);
     var title: [160]u8 = undefined;
-    const project = std.fmt.bufPrint(&title, "tuim / {s}", .{a.git_panel.current_branch orelse "main"}) catch "tuim";
+    const project = if (a.git_panel.current_branch) |branch| std.fmt.bufPrint(&title, "tuim / {s}", .{branch}) catch "tuim" else "tuim";
     a.ren.drawTextClipped(1, 0, rect.w -| 2, project, t.fg_accent, t.bg_sidebar, true, false);
     if (layout.total.h > 1) a.ren.drawButtonText(1, 1, rect.w -| 2, if (a.workspace.overview) "WORKSPACE" else "< Workspace [Esc]", t.fg_secondary, t.bg_sidebar, false, false);
     if (!a.workspace.overview) return;

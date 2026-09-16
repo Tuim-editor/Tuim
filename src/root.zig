@@ -16,6 +16,7 @@ test "all core modules compile and register their tests" {
     _ = @import("tui/workspace.zig");
     _ = @import("tui/input.zig");
     _ = @import("tui/capabilities.zig");
+    _ = @import("tui/terminal.zig");
     _ = @import("tui/theme.zig");
     _ = @import("tui/widgets/primitives.zig");
     _ = @import("tui/widgets/git_panel.zig");

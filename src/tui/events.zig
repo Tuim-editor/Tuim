@@ -68,6 +68,39 @@ test "AI context commands keep sidebar focus" {
     try std.testing.expect(aiCommandMovesFocus("lua _G.RunAIAction('write_tests')"));
 }
 
+/// Translates xterm modified cursor keys (ESC[1;<mod><A-D|H|F>) to Neovim notation.
+fn modifiedCsiKey(raw: []const u8, buf: []u8) ?[]const u8 {
+    if (raw.len != 6 or !std.mem.startsWith(u8, raw, "\x1b[1;")) return null;
+    const name = switch (raw[5]) {
+        'A' => "Up",
+        'B' => "Down",
+        'C' => "Right",
+        'D' => "Left",
+        'H' => "Home",
+        'F' => "End",
+        else => return null,
+    };
+    if (raw[4] < '2' or raw[4] > '8') return null;
+    const mods = raw[4] - '1';
+    return std.fmt.bufPrint(buf, "<{s}{s}{s}{s}>", .{
+        if (mods & 4 != 0) "C-" else "",
+        if (mods & 2 != 0) "M-" else "",
+        if (mods & 1 != 0) "S-" else "",
+        name,
+    }) catch null;
+}
+
+test "modified CSI cursor keys translate to Neovim notation" {
+    var buf: [16]u8 = undefined;
+    try std.testing.expectEqualStrings("<S-Left>", modifiedCsiKey("\x1b[1;2D", &buf).?);
+    try std.testing.expectEqualStrings("<C-Right>", modifiedCsiKey("\x1b[1;5C", &buf).?);
+    try std.testing.expectEqualStrings("<C-S-Right>", modifiedCsiKey("\x1b[1;6C", &buf).?);
+    try std.testing.expectEqualStrings("<S-Home>", modifiedCsiKey("\x1b[1;2H", &buf).?);
+    try std.testing.expectEqualStrings("<C-M-S-End>", modifiedCsiKey("\x1b[1;8F", &buf).?);
+    try std.testing.expect(modifiedCsiKey("\x1b[D", &buf) == null);
+    try std.testing.expect(modifiedCsiKey("\x1b[1;9D", &buf) == null);
+}
+
 fn writeHandoffInit(path: []const u8, content: []const u8) void {
     const fd = std.posix.openat(std.posix.AT.FDCWD, path, .{ .ACCMODE = .WRONLY, .CREAT = true, .TRUNC = true }, 0o600) catch return;
     defer _ = std.posix.system.close(fd);
@@ -302,13 +335,15 @@ pub fn handleKey(a: *App, k: input.KeyEvent, layout: Layout) !bool {
         }
     }
 
-    var alt_buf: [10]u8 = undefined;
+    var alt_buf: [16]u8 = undefined;
     const nk = get_key: {
         if (k.raw.len == 1) {
             const b = k.raw[0];
             if (b == 0x0d or b == 0x0a) break :get_key "<Enter>";
             if (b == 0x1b) break :get_key "<Esc>";
-            if (b == 0x7f or b == 0x08) break :get_key "<BS>";
+            // Terminals send 0x7f for Backspace; 0x08 is Ctrl+H (IDE replace).
+            if (b == 0x7f) break :get_key "<BS>";
+            if (b == 0x08) break :get_key "<C-h>";
             if (b == 0x09) break :get_key "<Tab>";
             if (b >= 1 and b <= 26) {
                 const ctrl_keys = [_][]const u8{
@@ -432,6 +467,7 @@ pub fn handleKey(a: *App, k: input.KeyEvent, layout: Layout) !bool {
             a.invalidations.damageAll();
             break :get_key "";
         }
+        if (modifiedCsiKey(k.raw, &alt_buf)) |key| break :get_key key;
         break :get_key k.raw;
     };
 
@@ -583,7 +619,8 @@ pub fn handleKey(a: *App, k: input.KeyEvent, layout: Layout) !bool {
         return true;
     }
     if (a.ui_state.native_picker_chrome and !std.mem.eql(u8, nk, kb.toggle_zen)) {
-        const text = if (std.mem.eql(u8, nk, "<")) "<lt>" else nk;
+        const text = if (nk.ptr == k.raw.ptr) try std.mem.replaceOwned(u8, a.allocator, nk, "<", "<lt>") else nk;
+        defer if (nk.ptr == k.raw.ptr) a.allocator.free(text);
         const params = [_]Value{.{ .string = text }};
         a.rpc.notify("nvim_input", &params) catch {};
         return true;
@@ -896,7 +933,9 @@ pub fn handleKey(a: *App, k: input.KeyEvent, layout: Layout) !bool {
             }
         }
 
-        const sent_key = if (std.mem.eql(u8, nk, "<")) @as([]const u8, "<lt>") else nk;
+        // Untranslated printable text: escape every '<' so nvim_input doesn't parse it as key notation.
+        const sent_key = if (nk.ptr == k.raw.ptr) try std.mem.replaceOwned(u8, a.allocator, nk, "<", "<lt>") else nk;
+        defer if (nk.ptr == k.raw.ptr) a.allocator.free(sent_key);
         var ip = try a.allocator.alloc(Value, 1);
         defer a.allocator.free(ip);
         ip[0] = .{ .string = sent_key };

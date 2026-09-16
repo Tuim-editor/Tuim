@@ -30,7 +30,7 @@ pub const GitPanel = struct {
     is_changes_open: bool = true,
     is_commits_open: bool = true,
 
-    commit_buf: [256]u8 = undefined,
+    commit_buf: [4096]u8 = undefined,
     commit_len: usize = 0,
     is_focus_commit: bool = false,
 
@@ -90,53 +90,17 @@ pub const GitPanel = struct {
             } else |_| {}
         }
 
-        // 3. Fetch status
-        const argv = [_][]const u8{ "git", "status", "--porcelain" };
-        const stdout_val = git_utils.runGitCommand(self.allocator, self.io, &argv) catch |err| {
-            if (err == error.EndOfStream) return;
-            return;
-        };
+        // 3. Fetch status (-z keeps renames and non-ASCII paths intact)
+        const argv = [_][]const u8{ "git", "status", "--porcelain=v1", "-z" };
+        const stdout_val = git_utils.runGitCommand(self.allocator, self.io, &argv) catch return;
         defer self.allocator.free(stdout_val);
-
-        var lines = std.mem.splitScalar(u8, stdout_val, '\n');
-        while (lines.next()) |line| {
-            if (line.len < 4) continue;
-            const status = line[0..2];
-            const rel_path = line[3..];
-
-            var clean_path = rel_path;
-            if (clean_path.len > 0 and clean_path[0] == '"' and clean_path[clean_path.len - 1] == '"') {
-                clean_path = clean_path[1 .. clean_path.len - 1];
-            }
-
-            // X is index, Y is working tree
-            const is_staged = (status[0] != ' ' and status[0] != '?');
-            const is_unstaged = (status[1] != ' ');
-
-            if (is_staged) {
-                try self.items.append(.{
-                    .path = try self.arena.allocator().dupe(u8, clean_path),
-                    .status = .{ status[0], ' ' },
-                    .is_staged = true,
-                });
-            }
-            if (is_unstaged) {
-                try self.items.append(.{
-                    .path = try self.arena.allocator().dupe(u8, clean_path),
-                    .status = .{ ' ', status[1] },
-                    .is_staged = false,
-                });
-            }
-        }
-
-        // Sort: staged first, then alphabetically
-        std.sort.block(GitItem, self.items.items, {}, struct {
-            fn lessThan(_: void, a: GitItem, b: GitItem) bool {
-                if (a.is_staged and !b.is_staged) return true;
-                if (!a.is_staged and b.is_staged) return false;
-                return std.mem.lessThan(u8, a.path, b.path);
-            }
-        }.lessThan);
+        var snapshot = try GitSnapshot.parse(self.allocator, "", "", stdout_val);
+        defer snapshot.deinit();
+        for (snapshot.status) |item| try self.items.append(.{
+            .path = try self.arena.allocator().dupe(u8, item.path),
+            .status = item.code,
+            .is_staged = item.staged,
+        });
     }
 
     /// Reactor-thread ownership transfer from the background refresh worker.
@@ -298,11 +262,15 @@ pub const GitPanel = struct {
                 self.is_focus_commit = false;
                 return true;
             } else if (std.mem.eql(u8, key, "<BS>") or std.mem.eql(u8, key, "\x7f")) {
+                // Drop a whole UTF-8 sequence, not just its last byte.
+                while (self.commit_len > 0 and self.commit_buf[self.commit_len - 1] & 0xC0 == 0x80) self.commit_len -= 1;
                 if (self.commit_len > 0) self.commit_len -= 1;
                 return true;
             } else if (key.len > 0 and (key.len == 1 or key[0] != '<')) {
+                // Refuse keys that would overflow instead of truncating the message.
+                if (self.commit_len + key.len > self.commit_buf.len) return true;
                 for (key) |c| {
-                    if (c >= 32 and c <= 126 and self.commit_len < self.commit_buf.len) {
+                    if (c >= 32 and c != 127) {
                         self.commit_buf[self.commit_len] = c;
                         self.commit_len += 1;
                     }
@@ -384,13 +352,45 @@ pub const GitPanel = struct {
         if (self.commit_len == 0) return;
         const msg = self.commit_buf[0..self.commit_len];
         const argv = [_][]const u8{ "git", "commit", "-m", msg };
-        if (git_utils.runGitCommand(self.allocator, self.io, &argv)) |res| {
-            self.allocator.free(res);
-        } else |_| {}
+        // On failure keep the draft; the caller reports the error.
+        self.allocator.free(try git_utils.runGitCommand(self.allocator, self.io, &argv));
 
         self.commit_len = 0;
         self.is_focus_commit = false;
         try self.refresh();
+    }
+
+    /// Length of the longest prefix of `text` ending on a complete UTF-8
+    /// character. Input arrives in raw reads, so the last character can still
+    /// be missing bytes; decoding those would assert instead of erroring.
+    fn completeLen(text: []const u8) usize {
+        var seq = text.len;
+        while (seq > 0 and text[seq - 1] & 0xC0 == 0x80) seq -= 1;
+        if (seq == 0) return 0;
+        seq -= 1;
+        const need = std.unicode.utf8ByteSequenceLength(text[seq]) catch return text.len;
+        return if (text.len - seq < need) seq else text.len;
+    }
+
+    /// Byte offset of the longest suffix of `text` that fits in `max_cells`.
+    fn tailStart(text: []const u8, max_cells: u16) usize {
+        var start = text.len;
+        var used: usize = 0;
+        while (start > 0) {
+            var prev = start - 1;
+            while (prev > 0 and text[prev] & 0xC0 == 0x80) prev -= 1;
+            const cp = decodeOrReplacement(text[prev..start]);
+            used += renderer.unicodeCellWidth(cp);
+            if (used > max_cells) break;
+            start = prev;
+        }
+        return start;
+    }
+
+    fn decodeOrReplacement(bytes: []const u8) u21 {
+        const len = std.unicode.utf8ByteSequenceLength(bytes[0]) catch return 0xFFFD;
+        if (len != bytes.len) return 0xFFFD;
+        return std.unicode.utf8Decode(bytes) catch 0xFFFD;
     }
 
     fn drawTextClipped(rend: *renderer.Renderer, x: u16, y: u16, text: []const u8, max_w: u16, fg: Color, bg: Color, bold: bool, italic: bool) void {
@@ -445,7 +445,12 @@ pub const GitPanel = struct {
         // Commit Box
         const c_bg = if (self.is_focus_commit) colors.bg_editor else colors.bg_sidebar;
         rend.drawRect(Rect{ .x = rect.x + 1, .y = rect.y + cy, .w = rect.w - 2, .h = 1 }, " ", colors.fg_primary, c_bg);
-        const msg = std.fmt.bufPrint(&buf, "{s}{s}", .{ self.commit_buf[0..self.commit_len], if (self.is_focus_commit) "_" else "" }) catch "";
+        var msg_buf: [4097]u8 = undefined;
+        const box_w = rect.w -| 4;
+        const draft = self.commit_buf[0..completeLen(self.commit_buf[0..self.commit_len])];
+        // Show the tail so the cursor stays visible in long messages.
+        const shown = if (self.is_focus_commit) draft[tailStart(draft, box_w -| 1)..] else draft;
+        const msg = std.fmt.bufPrint(&msg_buf, "{s}{s}", .{ shown, if (self.is_focus_commit) "_" else "" }) catch "";
         if (msg.len > 0) {
             drawTextClipped(rend, rect.x + 2, rect.y + cy, msg, rect.w - 4, colors.fg_primary, c_bg, false, false);
         } else {
@@ -623,4 +628,30 @@ test "Git keyboard selection reveals collapsed and offscreen changes" {
     _ = try panel.handleKey("<Esc>", 10);
     try std.testing.expect(!panel.is_focus_commit);
     try std.testing.expectEqualStrings("draft message", panel.commit_buf[0..panel.commit_len]);
+}
+
+test "Git commit box keeps UTF-8, refuses overflow and shows the tail" {
+    var threaded = std.Io.Threaded.init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    var panel = GitPanel.init(std.testing.allocator, threaded.io());
+    defer panel.deinit();
+    _ = try panel.handleKey("c", 10);
+    _ = try panel.handleKey("café 日本", 10);
+    try std.testing.expectEqualStrings("café 日本", panel.commit_buf[0..panel.commit_len]);
+    _ = try panel.handleKey("<BS>", 10);
+    try std.testing.expectEqualStrings("café 日", panel.commit_buf[0..panel.commit_len]);
+    for (0..5000) |_| _ = try panel.handleKey("x", 10);
+    try std.testing.expectEqual(panel.commit_buf.len, panel.commit_len);
+    _ = try panel.handleKey("日", 10);
+    try std.testing.expectEqual(@as(u8, 'x'), panel.commit_buf[panel.commit_len - 1]);
+    try std.testing.expectEqual(@as(usize, 3), GitPanel.tailStart("abcdef", 3));
+    try std.testing.expectEqual(@as(usize, 5), GitPanel.tailStart("ab日本", 3));
+    try std.testing.expectEqual(@as(usize, 0), GitPanel.tailStart("ab", 10));
+    // A character split across two reads renders only once it is complete.
+    panel.commit_len = 0;
+    _ = try panel.handleKey("a\xe6\x97", 10);
+    try std.testing.expectEqual(@as(usize, 1), GitPanel.completeLen(panel.commit_buf[0..panel.commit_len]));
+    _ = try panel.handleKey("\xa5", 10);
+    try std.testing.expectEqualStrings("a日", panel.commit_buf[0..GitPanel.completeLen(panel.commit_buf[0..panel.commit_len])]);
+    try std.testing.expectEqual(@as(usize, 1), GitPanel.tailStart("a日", 2));
 }

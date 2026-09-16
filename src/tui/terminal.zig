@@ -108,7 +108,21 @@ pub const Terminal = struct {
         // Prefer the controlling terminal, but stdin is a valid interactive
         // PTY in containers, CI runners, SSH wrappers, and some multiplexers
         // where /dev/tty is unavailable.
-        const opened_tty = posix.openat(posix.AT.FDCWD, "/dev/tty", .{ .ACCMODE = .RDWR }, 0) catch null;
+        var opened_tty: ?posix.fd_t = posix.openat(posix.AT.FDCWD, "/dev/tty", .{ .ACCMODE = .RDWR }, 0) catch null;
+        // macOS poll() reports POLLNVAL for /dev/tty, which would spin the
+        // reactor without ever delivering input; use stdin/stdout instead.
+        if (opened_tty) |fd| {
+            if (!isPollable(fd)) {
+                _ = posix.system.close(fd);
+                opened_tty = null;
+            }
+        }
+        if (opened_tty == null) {
+            _ = posix.tcgetattr(0) catch return error.TerminalUnavailable;
+            _ = posix.tcgetattr(1) catch return error.TerminalUnavailable;
+            // `tuim </dev/tty` gives a tty on stdin that poll() still rejects.
+            if (!isPollable(0)) return error.TerminalUnavailable;
+        }
         const tty_fd: posix.fd_t = opened_tty orelse 0;
         const output_fd: posix.fd_t = opened_tty orelse 1;
 
@@ -180,3 +194,18 @@ pub const Terminal = struct {
         return .{ ws.col, ws.row };
     }
 };
+
+fn isPollable(fd: posix.fd_t) bool {
+    var fds = [_]posix.pollfd{.{ .fd = fd, .events = posix.POLL.IN, .revents = 0 }};
+    _ = posix.poll(&fds, 0) catch return false;
+    return (fds[0].revents & posix.POLL.NVAL) == 0;
+}
+
+test "isPollable rejects fds that poll reports as invalid" {
+    var pipe: [2]posix.fd_t = undefined;
+    try std.testing.expectEqual(posix.E.SUCCESS, posix.errno(posix.system.pipe(&pipe)));
+    defer _ = posix.system.close(pipe[1]);
+    try std.testing.expect(isPollable(pipe[0]));
+    _ = posix.system.close(pipe[0]);
+    try std.testing.expect(!isPollable(pipe[0]));
+}
