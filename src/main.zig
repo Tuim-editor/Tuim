@@ -44,6 +44,17 @@ const async_effects = @import("nvim/call_sites_05c.zig");
 
 var global_term: ?*Terminal = null;
 var log_path: ?[]const u8 = null;
+var quit_signal_received = std.atomic.Value(bool).init(false);
+
+// SIGTERM/SIGHUP only set a flag and wake the reactor so the event loop
+// returns normally and deferred terminal restoration runs.
+fn handleQuitSignal(sig: posix.SIG) callconv(.c) void {
+    _ = sig;
+    quit_signal_received.store(true, .monotonic);
+    if (input.sigwinch_pipe_write_fd) |fd| {
+        _ = posix.system.write(fd, "Q", 1);
+    }
+}
 
 fn zenSessionSaved(context: ?*anyopaque, completion: *Completion) anyerror!void {
     const app: *App = @ptrCast(@alignCast(context.?));
@@ -214,21 +225,60 @@ pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace, ret_
 }
 
 pub fn main(init: std.process.Init) !void {
-    innerMain(init) catch |err| {
-        if (err == error.EndOfStream or err == error.QuitApplication) return;
-        std.debug.print("Tuim could not start: {}. Verify Neovim is installed and check Tuim's log.\n", .{err});
-        return err;
+    innerMain(init) catch |err| switch (err) {
+        error.EndOfStream, error.QuitApplication => return,
+        error.NvimNotFound => {
+            std.debug.print("Tuim could not start: Neovim (nvim) not found on PATH\n", .{});
+            std.process.exit(1);
+        },
+        error.TerminalUnavailable => {
+            std.debug.print("Tuim could not start: no interactive terminal available\n", .{});
+            std.process.exit(1);
+        },
+        else => {
+            std.debug.print("Tuim could not start: {}. Verify Neovim is installed and check Tuim's log.\n", .{err});
+            return err;
+        },
     };
 }
 
-fn isVersionArg(arg: []const u8) bool {
-    return std.mem.eql(u8, arg, "--version") or std.mem.eql(u8, arg, "-V");
+const usage =
+    \\Usage: tuim [options] [file ...]
+    \\
+    \\Options:
+    \\  -h, --help       Show this help and exit
+    \\  -V, --version    Print the version and exit
+    \\  --diagnostics    Write diagnostics.json on exit
+    \\  --               Treat all following arguments as files
+    \\
+;
+
+const ArgKind = enum { help, version, diagnostics, end_of_options, unknown_option, file };
+
+fn classifyArg(arg: []const u8) ArgKind {
+    if (std.mem.eql(u8, arg, "--help") or std.mem.eql(u8, arg, "-h")) return .help;
+    if (std.mem.eql(u8, arg, "--version") or std.mem.eql(u8, arg, "-V")) return .version;
+    if (std.mem.eql(u8, arg, "--diagnostics")) return .diagnostics;
+    if (std.mem.eql(u8, arg, "--")) return .end_of_options;
+    if (arg.len > 1 and arg[0] == '-') return .unknown_option;
+    return .file;
 }
 
-fn requestedVersion(init: std.process.Init) bool {
-    var args = init.minimal.args.iterate();
-    _ = args.skip();
-    return isVersionArg(args.next() orelse return false);
+fn usableSize(size: [2]u16) [2]u16 {
+    if (size[0] == 0 or size[1] == 0) return .{ 80, 24 };
+    return size;
+}
+
+fn spawnNvim(io: std.Io, environ_map: *const std.process.Environ.Map) !NvimProcess {
+    return NvimProcess.spawn(io, environ_map) catch |err| if (err == error.FileNotFound) error.NvimNotFound else err;
+}
+
+fn hasUsableTerminal(io: std.Io) bool {
+    if (posix.openat(posix.AT.FDCWD, "/dev/tty", .{ .ACCMODE = .RDWR }, 0)) |fd| {
+        _ = posix.system.close(fd);
+        return true;
+    } else |_| {}
+    return std.Io.File.stdin().isTty(io) catch false;
 }
 
 fn diagnosticsRequested(init: std.process.Init) bool {
@@ -237,7 +287,11 @@ fn diagnosticsRequested(init: std.process.Init) bool {
     }
     var args = init.minimal.args.iterate();
     _ = args.skip();
-    while (args.next()) |arg| if (std.mem.eql(u8, arg, "--diagnostics")) return true;
+    while (args.next()) |arg| switch (classifyArg(arg)) {
+        .diagnostics => return true,
+        .end_of_options => return false,
+        else => {},
+    };
     return false;
 }
 
@@ -249,12 +303,38 @@ fn printVersion(init: std.process.Init) !void {
 }
 
 fn innerMain(init: std.process.Init) !void {
-    if (requestedVersion(init)) {
-        try printVersion(init);
-        return;
+    const alloc = init.gpa;
+    var files: std.ArrayList([]const u8) = .empty;
+    defer files.deinit(alloc);
+    {
+        var args = init.minimal.args.iterate();
+        _ = args.skip(); // skip executable name
+        var options_ended = false;
+        while (args.next()) |arg| {
+            const kind: ArgKind = if (options_ended) .file else classifyArg(arg);
+            switch (kind) {
+                .help => {
+                    var buffer: [512]u8 = undefined;
+                    var stdout = std.Io.File.stdout().writerStreaming(init.io, &buffer);
+                    try stdout.interface.writeAll(usage);
+                    try stdout.interface.flush();
+                    return;
+                },
+                .version => {
+                    try printVersion(init);
+                    return;
+                },
+                .unknown_option => {
+                    std.debug.print("tuim: unknown option '{s}'\n{s}", .{ arg, usage });
+                    std.process.exit(2);
+                },
+                .end_of_options => options_ended = true,
+                .diagnostics => {},
+                .file => try files.append(alloc, arg),
+            }
+        }
     }
 
-    const alloc = init.gpa;
     const capabilities = Capabilities.detect(init.environ_map);
     const home = init.environ_map.get("HOME") orelse "";
     const fallback_data_home = try std.fs.path.join(alloc, &.{ home, ".local", "share" });
@@ -329,17 +409,11 @@ fn innerMain(init: std.process.Init) !void {
     const handoff_path = try std.fs.path.join(alloc, &[_][]const u8{ app_data_dir, "tuim_handoff_init.lua" });
     defer alloc.free(handoff_path);
 
-    var term = try Terminal.init(capabilities);
-    defer term.deinit();
-    global_term = &term;
+    if (!hasUsableTerminal(init.io)) return error.TerminalUnavailable;
 
-    var sa = std.posix.Sigaction{
-        .handler = .{ .handler = input.handleSigwinch },
-        .mask = std.mem.zeroes(std.posix.sigset_t),
-        .flags = 0,
-    };
-    std.posix.sigaction(std.posix.SIG.WINCH, &sa, null);
-
+    // Publish the wake pipe before installing handlers so no signal can set
+    // its flag without also waking the reactor, and install both before the
+    // terminal enters raw mode so a signal can never skip restoration.
     const sigwinch_pipe = try createNonblockingPipe();
     defer {
         input.sigwinch_pipe_write_fd = null;
@@ -348,36 +422,40 @@ fn innerMain(init: std.process.Init) !void {
     }
     input.sigwinch_pipe_write_fd = sigwinch_pipe[1];
 
-    const size = try term.getSize();
+    var sa = std.posix.Sigaction{
+        .handler = .{ .handler = input.handleSigwinch },
+        .mask = std.mem.zeroes(std.posix.sigset_t),
+        .flags = 0,
+    };
+    std.posix.sigaction(std.posix.SIG.WINCH, &sa, null);
+    sa.handler = .{ .handler = handleQuitSignal };
+    std.posix.sigaction(std.posix.SIG.TERM, &sa, null);
+    std.posix.sigaction(std.posix.SIG.HUP, &sa, null);
+
+    var term = try Terminal.init(capabilities);
+    defer term.deinit();
+    global_term = &term;
+
+    const size = usableSize(term.getSize() catch .{ 0, 0 });
     var renderer = try Renderer.init(alloc, size[0], size[1], term.writer());
     renderer.true_color = capabilities.true_color;
     defer renderer.deinit(alloc);
 
     var is_resuming = false;
     app_loop: while (true) {
-        var nvim = try NvimProcess.spawn(init.io, &nvim_environ);
+        var nvim = try spawnNvim(init.io, &nvim_environ);
         defer nvim.deinit(init.io);
         var rpc = RpcClient.init(nvim, alloc, init.io);
         defer rpc.deinit();
         var ui_state = UiState.init(alloc);
         defer ui_state.deinit();
 
-        var nvim_term = try NvimProcess.spawn(init.io, &nvim_environ);
+        var nvim_term = try spawnNvim(init.io, &nvim_environ);
         defer nvim_term.deinit(init.io);
         var rpc_term = RpcClient.init(nvim_term, alloc, init.io);
         defer rpc_term.deinit();
         var ui_term = UiState.init(alloc);
         defer ui_term.deinit();
-
-        var args = init.minimal.args.iterate();
-        _ = args.skip(); // skip executable name
-        var initial_file: ?[]const u8 = null;
-        while (args.next()) |arg| {
-            if (!std.mem.eql(u8, arg, "--diagnostics")) {
-                initial_file = arg;
-                break;
-            }
-        }
 
         if (is_resuming) {
             const src_cmd_str = try std.fmt.allocPrint(alloc, "silent! source {s}", .{session_path});
@@ -389,7 +467,7 @@ fn innerMain(init: std.process.Init) !void {
             // Optional: wait a moment for the session to load
         }
 
-        runNvimSession(if (is_resuming) null else initial_file, init, alloc, app_data_dir, &term, &renderer, &rpc, &ui_state, &rpc_term, &ui_term, sigwinch_pipe[0], session_path, handoff_path) catch |err| {
+        runNvimSession(if (is_resuming) &.{} else files.items, init, alloc, app_data_dir, &term, &renderer, &rpc, &ui_state, &rpc_term, &ui_term, sigwinch_pipe[0], session_path, handoff_path) catch |err| {
             if (err == error.EndOfStream) continue :app_loop;
             if (err == error.QuitApplication) break :app_loop;
             if (err == error.ReloadApplication) {
@@ -431,14 +509,26 @@ fn innerMain(init: std.process.Init) !void {
     }
 }
 
-test "version flags are recognized" {
-    try std.testing.expect(isVersionArg("--version"));
-    try std.testing.expect(isVersionArg("-V"));
-    try std.testing.expect(!isVersionArg("--help"));
+test "command line arguments are classified" {
+    try std.testing.expectEqual(ArgKind.version, classifyArg("--version"));
+    try std.testing.expectEqual(ArgKind.version, classifyArg("-V"));
+    try std.testing.expectEqual(ArgKind.help, classifyArg("--help"));
+    try std.testing.expectEqual(ArgKind.help, classifyArg("-h"));
+    try std.testing.expectEqual(ArgKind.diagnostics, classifyArg("--diagnostics"));
+    try std.testing.expectEqual(ArgKind.end_of_options, classifyArg("--"));
+    try std.testing.expectEqual(ArgKind.unknown_option, classifyArg("--bogus"));
+    try std.testing.expectEqual(ArgKind.file, classifyArg("-"));
+    try std.testing.expectEqual(ArgKind.file, classifyArg("a.txt"));
+}
+
+test "zero terminal size falls back to 80x24" {
+    try std.testing.expectEqual([2]u16{ 80, 24 }, usableSize(.{ 0, 0 }));
+    try std.testing.expectEqual([2]u16{ 80, 24 }, usableSize(.{ 120, 0 }));
+    try std.testing.expectEqual([2]u16{ 100, 30 }, usableSize(.{ 100, 30 }));
 }
 
 fn runNvimSession(
-    initial_file: ?[]const u8,
+    files: []const []const u8,
     init: std.process.Init,
     alloc: std.mem.Allocator,
     app_data_dir: []const u8,
@@ -686,10 +776,18 @@ fn runNvimSession(
         std.log.info("Minimal terminal runtime loaded", .{});
     }
 
-    if (initial_file) |f| {
-        nvim_helpers.openFile(rpc, alloc, f) catch |err| {
-            app.notify(.failure, "Unable to open {s}: {}", .{ f, err });
+    if (files.len > 0) {
+        nvim_helpers.openFile(rpc, alloc, files[0]) catch |err| {
+            app.notify(.failure, "Unable to open {s}: {}", .{ files[0], err });
         };
+        // Remaining files become listed buffers; the first stays current.
+        for (files[1..]) |f| {
+            var badd_args = [_]Value{.{ .string = f }};
+            var badd_params = [_]Value{ .{ .string = "vim.cmd('badd ' .. vim.fn.fnameescape(select(1, ...)))" }, .{ .array = &badd_args } };
+            rpc.notify("nvim_exec_lua", &badd_params) catch |err| {
+                app.notify(.failure, "Unable to open {s}: {}", .{ f, err });
+            };
+        }
     }
 
     std.log.info("Entering application event loop", .{});
@@ -723,6 +821,7 @@ fn runNvimSession(
     var last_editor_dimensions: ?invalidation.Dimensions = null;
     var last_terminal_dimensions: ?invalidation.Dimensions = null;
     while (true) {
+        if (quit_signal_received.load(.monotonic)) return error.QuitApplication;
         var ts: std.posix.timespec = undefined;
         _ = std.posix.system.clock_gettime(std.posix.CLOCK.MONOTONIC, &ts);
         const now = ts.sec;
@@ -886,7 +985,7 @@ fn runNvimSession(
                 if (input.sigwinch_received.swap(false, .monotonic)) {
                     var ws: posix.winsize = undefined;
                     const rc = posix.system.ioctl(term.tty_fd, posix.T.IOCGWINSZ, @intFromPtr(&ws));
-                    if (posix.errno(rc) == .SUCCESS) {
+                    if (posix.errno(rc) == .SUCCESS and ws.col > 0 and ws.row > 0) {
                         try ren.resize(alloc, ws.col, ws.row);
                         app.invalidations.forceFull(.terminal_resize);
                     }
@@ -957,7 +1056,7 @@ fn runNvimSession(
                 var discard: [32]u8 = undefined;
                 _ = std.posix.read(sigwinch_read_fd, &discard) catch 0;
                 if (input.sigwinch_received.swap(false, .monotonic)) {
-                    const resized = try term.getSize();
+                    const resized = usableSize(try term.getSize());
                     try ren.resize(alloc, resized[0], resized[1]);
                     app.invalidations.forceFull(.terminal_resize);
                 }
