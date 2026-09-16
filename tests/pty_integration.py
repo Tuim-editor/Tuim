@@ -91,7 +91,12 @@ def run_mode(mode):
         original = termios.tcgetattr(fd)
         fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 30, 100, 0, 0))
         os.kill(pid, signal.SIGWINCH)
-        output = bytearray(read_available(fd, time.monotonic() + 1.5))
+        output = bytearray()
+        startup_deadline = time.monotonic() + 8.0
+        while b"Commands" not in output and b"TUIM" not in output and time.monotonic() < startup_deadline:
+            output.extend(read_available(fd, min(startup_deadline, time.monotonic() + 0.2)))
+        assert b"Commands" in output or b"TUIM" in output, \
+            f"{mode}: Tuim did not render before the startup deadline; output tail: {bytes(output[-1200:])!r}"
         startup = re.sub(rb"\x1b\[[0-?]*[ -/]*[@-~]", b"", bytes(output))
         for intro_text in (b"NVIM v", b"Nvim is open source", b":help nvim"):
             assert intro_text not in startup, f"{mode}: Neovim intro flashed during startup"
