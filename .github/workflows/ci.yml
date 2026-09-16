@@ -89,6 +89,13 @@ jobs:
           set -o pipefail
           zig build test 2>&1 | tee "$RUNNER_TEMP/macos-smoke.log"
           zig build 2>&1 | tee -a "$RUNNER_TEMP/macos-smoke.log"
+      - name: DEBUG probe poll() on /dev/tty vs stdin
+        if: always()
+        timeout-minutes: 2
+        run: |
+          sw_vers
+          uname -a
+          python3 tests/tty_poll_probe.py 2>&1 | tee -a "$RUNNER_TEMP/macos-smoke.log"
       - name: Test controlling terminal input on macOS
         timeout-minutes: 2
         run: |
