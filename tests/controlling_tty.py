@@ -39,12 +39,15 @@ def read_available(fd, deadline):
 def diagnose(pid, data_dir, output):
     """Explain a stuck child: its last output, its log, and where it is stuck."""
     report = ["output tail: %r" % bytes(output[-2000:]).decode("utf-8", errors="replace")]
-    log_path = data_dir / "tuim.log"
-    report.append("tuim.log:\n%s" % (
-        log_path.read_text(encoding="utf-8", errors="replace") if log_path.exists() else "<missing>"))
+    try:  # the log may be missing, unreadable, or rotated away under us
+        log = (data_dir / "tuim.log").read_text(encoding="utf-8", errors="replace")[-4000:]
+    except OSError as exc:
+        log = "<unreadable: %s>" % exc
+    report.append("tuim.log tail:\n%s" % log)
+    # /proc/<pid>/stack needs CAP_SYS_ADMIN, so read status on Linux instead.
     for cmd in (["ps", "-o", "pid,stat,wchan,%cpu,command", "-p", str(pid)],
                 ["sample", str(pid), "1", "-mayDie"] if sys.platform == "darwin" else
-                ["cat", "/proc/%d/stack" % pid]):
+                ["cat", "/proc/%d/status" % pid]):
         try:
             out = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
             report.append("$ %s\n%s%s" % (" ".join(cmd), out.stdout, out.stderr))
@@ -95,6 +98,7 @@ def run_controlling_tty():
                         "pty master write failed (%s) while Tuim was still running\n" % exc
                         + diagnose(pid, base / "data/tuim", output))
                 output.extend(read_available(fd, min(deadline, time.monotonic() + 0.4)))
+                del output[:-8192]  # a redraw loop must not exhaust memory before we report
                 waited, status = os.waitpid(pid, os.WNOHANG)
                 if waited != 0:
                     break
