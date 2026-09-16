@@ -89,11 +89,34 @@ jobs:
           set -o pipefail
           zig build test 2>&1 | tee "$RUNNER_TEMP/macos-smoke.log"
           zig build 2>&1 | tee -a "$RUNNER_TEMP/macos-smoke.log"
-      - name: Test controlling terminal input on macOS
-        timeout-minutes: 2
+      - name: A/B controlling terminal input across terminal.zig versions
+        timeout-minutes: 25
         run: |
           set -o pipefail
-          python3 tests/controlling_tty.py 2>&1 | tee -a "$RUNNER_TEMP/macos-smoke.log"
+          sw_vers
+          git fetch --depth=1 origin main fix/macos-input-and-qa-bugs
+          git show origin/main:src/tui/terminal.zig > "$RUNNER_TEMP/v_main.zig"
+          git show origin/fix/macos-input-and-qa-bugs:src/tui/terminal.zig > "$RUNNER_TEMP/v_prfix.zig"
+          cp src/tui/terminal.zig "$RUNNER_TEMP/v_mine.zig"
+          for v in main prfix mine; do
+            cp "$RUNNER_TEMP/v_$v.zig" src/tui/terminal.zig
+            sha=$(shasum -a 256 src/tui/terminal.zig | cut -d' ' -f1)
+            n=$(grep -c isPollable src/tui/terminal.zig || true)
+            echo "=== VARIANT $v sha256=$sha isPollable_lines=$n ==="
+            if [ "$v" = main ] && [ "$n" != "0" ]; then
+              echo "ABORT: origin/main copy is not the pre-fix file"; exit 1
+            fi
+            zig build
+            for i in 1 2 3; do
+              if python3 tests/controlling_tty.py > "$RUNNER_TEMP/ab-$v-$i.txt" 2>&1; then
+                echo "RESULT $v attempt $i PASS"
+              else
+                echo "RESULT $v attempt $i FAIL"
+                sed -n '1,60p' "$RUNNER_TEMP/ab-$v-$i.txt"
+              fi
+            done
+          done
+          cp "$RUNNER_TEMP/v_mine.zig" src/tui/terminal.zig
       - name: Test IDE mode on macOS
         timeout-minutes: 5
         run: |

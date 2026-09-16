@@ -105,23 +105,22 @@ pub const Terminal = struct {
     }
 
     pub fn init(capabilities: Capabilities) !Terminal {
-        // Prefer the controlling terminal, but stdin is a valid interactive
-        // PTY in containers, CI runners, SSH wrappers, and some multiplexers
-        // where /dev/tty is unavailable.
-        var opened_tty: ?posix.fd_t = posix.openat(posix.AT.FDCWD, "/dev/tty", .{ .ACCMODE = .RDWR }, 0) catch null;
-        // macOS poll() reports POLLNVAL for /dev/tty, which would spin the
-        // reactor without ever delivering input; use stdin/stdout instead.
-        if (opened_tty) |fd| {
-            if (!isPollable(fd)) {
-                _ = posix.system.close(fd);
-                opened_tty = null;
+        // Prefer stdin/stdout when they already are an interactive terminal.
+        // /dev/tty is the same device but a different kind of descriptor, and
+        // macOS poll() never reports it readable (it answers POLLNVAL on some
+        // releases and a silent 0 on others), so the reactor would spin at
+        // 100% CPU without ever delivering input. Fall back to /dev/tty only
+        // when stdin or stdout is redirected.
+        var opened_tty: ?posix.fd_t = null;
+        if (!isInteractive(0) or !isInteractive(1)) {
+            opened_tty = posix.openat(posix.AT.FDCWD, "/dev/tty", .{ .ACCMODE = .RDWR }, 0) catch null;
+            if (opened_tty) |fd| {
+                if (!isPollable(fd)) {
+                    _ = posix.system.close(fd);
+                    opened_tty = null;
+                }
             }
-        }
-        if (opened_tty == null) {
-            _ = posix.tcgetattr(0) catch return error.TerminalUnavailable;
-            _ = posix.tcgetattr(1) catch return error.TerminalUnavailable;
-            // `tuim </dev/tty` gives a tty on stdin that poll() still rejects.
-            if (!isPollable(0)) return error.TerminalUnavailable;
+            if (opened_tty == null) return error.TerminalUnavailable;
         }
         const tty_fd: posix.fd_t = opened_tty orelse 0;
         const output_fd: posix.fd_t = opened_tty orelse 1;
@@ -194,6 +193,12 @@ pub const Terminal = struct {
         return .{ ws.col, ws.row };
     }
 };
+
+fn isInteractive(fd: posix.fd_t) bool {
+    _ = posix.tcgetattr(fd) catch return false;
+    // `tuim </dev/tty` gives a tty on stdin that poll() still rejects.
+    return isPollable(fd);
+}
 
 fn isPollable(fd: posix.fd_t) bool {
     var fds = [_]posix.pollfd{.{ .fd = fd, .events = posix.POLL.IN, .revents = 0 }};
