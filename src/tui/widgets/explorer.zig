@@ -660,38 +660,35 @@ pub const Explorer = struct {
             const display_val = std.fmt.bufPrint(&val_buf, "{s}_", .{val_text}) catch val_text;
             drawTextClipped(rend, rect.x + 1, prompt_y, display_val, rect.w - 2, colors.fg_primary, colors.bg_editor, false, false);
         }
+    }
 
-        // Draw context menu if show_menu == true
-        if (self.show_menu) {
-            rend.pointer_position = pointer;
-            const mx = self.menu_x;
-            const my = self.menu_y;
+    pub fn drawOverlay(self: *const Explorer, rend: *renderer.Renderer, colors: anytype) void {
+        if (!self.show_menu) return;
 
-            const bg_menu = colors.bg_editor;
-            const fg_menu = colors.fg_primary;
-            const border_fg = colors.fg_accent;
+        const mx = self.menu_x;
+        const my = self.menu_y;
+        const bg_menu = colors.bg_editor;
+        const fg_menu = colors.fg_primary;
+        const border_fg = colors.fg_accent;
 
-            // Draw top border
-            rend.drawText(mx, my, "┌──────────────┐", border_fg, bg_menu, false, false);
+        rend.drawText(mx, my, "┌──────────────┐", border_fg, bg_menu, false, false);
 
-            // Draw options
-            if (self.selected_idx) |idx| {
-                if (self.items.items[idx].is_dir) {
-                    rend.drawControlText(mx, my + 1, if (colors.nerd_fonts) "│ 󰝒 New File   │" else "│ + New File   │", fg_menu, bg_menu, false, false);
-                    rend.drawControlText(mx, my + 2, if (colors.nerd_fonts) "│ 󰉋 New Folder │" else "│ + New Folder │", fg_menu, bg_menu, false, false);
-                    rend.drawControlText(mx, my + 3, if (colors.nerd_fonts) "│ 󰏫 Rename     │" else "│ ~ Rename     │", fg_menu, bg_menu, false, false);
-                    rend.drawControlText(mx, my + 4, if (colors.nerd_fonts) "│ 󰆴 Delete     │" else "│ - Delete     │", fg_menu, bg_menu, false, false);
-                    rend.drawText(mx, my + 5, "└──────────────┘", border_fg, bg_menu, false, false);
-                } else {
-                    rend.drawControlText(mx, my + 1, if (colors.nerd_fonts) "│ 󰏫 Rename     │" else "│ ~ Rename     │", fg_menu, bg_menu, false, false);
-                    rend.drawControlText(mx, my + 2, if (colors.nerd_fonts) "│ 󰆴 Delete     │" else "│ - Delete     │", fg_menu, bg_menu, false, false);
-                    rend.drawText(mx, my + 3, "└──────────────┘", border_fg, bg_menu, false, false);
-                }
-            } else {
+        if (self.selected_idx) |idx| {
+            if (self.items.items[idx].is_dir) {
                 rend.drawControlText(mx, my + 1, if (colors.nerd_fonts) "│ 󰝒 New File   │" else "│ + New File   │", fg_menu, bg_menu, false, false);
                 rend.drawControlText(mx, my + 2, if (colors.nerd_fonts) "│ 󰉋 New Folder │" else "│ + New Folder │", fg_menu, bg_menu, false, false);
+                rend.drawControlText(mx, my + 3, if (colors.nerd_fonts) "│ 󰏫 Rename     │" else "│ ~ Rename     │", fg_menu, bg_menu, false, false);
+                rend.drawControlText(mx, my + 4, if (colors.nerd_fonts) "│ 󰆴 Delete     │" else "│ - Delete     │", fg_menu, bg_menu, false, false);
+                rend.drawText(mx, my + 5, "└──────────────┘", border_fg, bg_menu, false, false);
+            } else {
+                rend.drawControlText(mx, my + 1, if (colors.nerd_fonts) "│ 󰏫 Rename     │" else "│ ~ Rename     │", fg_menu, bg_menu, false, false);
+                rend.drawControlText(mx, my + 2, if (colors.nerd_fonts) "│ 󰆴 Delete     │" else "│ - Delete     │", fg_menu, bg_menu, false, false);
                 rend.drawText(mx, my + 3, "└──────────────┘", border_fg, bg_menu, false, false);
             }
+        } else {
+            rend.drawControlText(mx, my + 1, if (colors.nerd_fonts) "│ 󰝒 New File   │" else "│ + New File   │", fg_menu, bg_menu, false, false);
+            rend.drawControlText(mx, my + 2, if (colors.nerd_fonts) "│ 󰉋 New Folder │" else "│ + New Folder │", fg_menu, bg_menu, false, false);
+            rend.drawText(mx, my + 3, "└──────────────┘", border_fg, bg_menu, false, false);
         }
     }
 };

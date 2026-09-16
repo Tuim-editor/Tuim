@@ -21,7 +21,8 @@ fn zenSessionSaved(context: ?*anyopaque, completion: *Completion) anyerror!void 
     const application: *App = @ptrCast(@alignCast(context.?));
     if (!async_effects.applyDeferredExit(&application.deferred_exit, .zen_handoff, completion)) application.notify(.failure, "Unable to save the Zen handoff session.", .{});
 }
-const Layout = @import("layout.zig").Layout;
+const layout_mod = @import("layout.zig");
+const Layout = layout_mod.Layout;
 const settings = @import("widgets/settings.zig");
 
 fn aiCommandMovesFocus(command: []const u8) bool {
@@ -163,6 +164,9 @@ fn workspaceAction(a: *App, action: workspace.Action, layout: Layout) anyerror!v
         else => null,
     };
     if (key) |raw| {
+        // Palette actions are explicit workspace commands, even when the live
+        // terminal had focus. Direct Ctrl+N still falls through to Neovim.
+        if (action == .new_file) a.terminal_focus = false;
         _ = try handleKey(a, .{ .char = 0, .raw = raw }, layout);
     } else switch (action) {
         .find_file => {
@@ -189,6 +193,15 @@ fn workspaceAction(a: *App, action: workspace.Action, layout: Layout) anyerror!v
                 else => unreachable,
             };
             if (action == .extensions) a.extension_shop.open() catch {};
+        },
+        .language_tools => {
+            a.mason_widget.is_open = true;
+            a.mason_widget.selected_tab = .lsp;
+            a.mason_widget.search_len = 0;
+            a.mason_widget.is_searching = false;
+            a.mason_widget.selected_idx = 0;
+            a.mason_widget.scroll_offset = 0;
+            a.mason_widget.refresh(a.rpc);
         },
         .settings => openSettings(a, false),
         .keys => openSettings(a, true),
@@ -236,23 +249,18 @@ fn workspaceAction(a: *App, action: workspace.Action, layout: Layout) anyerror!v
 }
 
 fn workspaceItem(a: *App, index: usize, layout: Layout) !void {
-    if (index < a.tabs.items.len) workspace.selectBuffer(a, index) else if (index - a.tabs.items.len < 8) try workspaceAction(a, workspace.actions[index - a.tabs.items.len], layout);
+    if (index < a.tabs.items.len) workspace.selectBuffer(a, index) else if (index - a.tabs.items.len < workspace.overview_action_count) try workspaceAction(a, workspace.actions[index - a.tabs.items.len], layout);
 }
 
 pub fn handleKey(a: *App, k: input.KeyEvent, layout: Layout) !bool {
     if (a.terminal_focus and !a.workspace.palette and !a.settings_widget.is_open) {
-        if (std.mem.eql(u8, k.raw, "\x1bv") or std.mem.eql(u8, k.raw, "\x1c")) { // Alt+v or Ctrl+\ -> Vertical Split
+        if (terminalPanelShortcut(k.raw)) |shortcut| {
             var cmd_p = try a.allocator.alloc(Value, 1);
             defer a.allocator.free(cmd_p);
-            cmd_p[0] = .{ .string = "vnew | terminal | startinsert" };
-            _ = try a.rpc_term.requestAsyncWithHandler("nvim_command", cmd_p, a, terminalAdded);
-            a.invalidations.damageAll();
-            return true;
-        }
-        if (std.mem.eql(u8, k.raw, "\x1bs")) { // Alt+s -> Horizontal Split
-            var cmd_p = try a.allocator.alloc(Value, 1);
-            defer a.allocator.free(cmd_p);
-            cmd_p[0] = .{ .string = "new | terminal | startinsert" };
+            cmd_p[0] = .{ .string = switch (shortcut) {
+                .vertical_split => "vnew | terminal | startinsert",
+                .horizontal_split => "new | terminal | startinsert",
+            } };
             _ = try a.rpc_term.requestAsyncWithHandler("nvim_command", cmd_p, a, terminalAdded);
             a.invalidations.damageAll();
             return true;
@@ -745,7 +753,7 @@ pub fn handleKey(a: *App, k: input.KeyEvent, layout: Layout) !bool {
         a.updateLayoutTree();
         a.invalidations.damageAll();
         return true;
-    } else if (new_file) {
+    } else if (new_file and !a.terminal_focus) {
         a.sidebar_focus = false;
         a.terminal_focus = false;
         const cmd_p = [1]Value{.{ .string = "_G.tuim_close_floating_windows(); vim.cmd('enew')" }};
@@ -789,7 +797,7 @@ pub fn handleKey(a: *App, k: input.KeyEvent, layout: Layout) !bool {
                 }
                 return true;
             }
-            if (std.mem.eql(u8, nk, "j") or std.mem.eql(u8, nk, "<Down>")) a.workspace.selected = @min(a.workspace.selected + 1, a.tabs.items.len + 7) else if (std.mem.eql(u8, nk, "k") or std.mem.eql(u8, nk, "<Up>")) a.workspace.selected -|= 1 else if (std.mem.eql(u8, nk, "<Home>")) a.workspace.selected = 0 else if (std.mem.eql(u8, nk, "<End>")) a.workspace.selected = a.tabs.items.len + 7 else if (std.mem.eql(u8, nk, "<Enter>") or std.mem.eql(u8, nk, "l")) try workspaceItem(a, a.workspace.selected, layout) else if (std.mem.eql(u8, nk, "<Esc>") or std.mem.eql(u8, nk, "<Tab>")) a.sidebar_focus = false;
+            if (std.mem.eql(u8, nk, "j") or std.mem.eql(u8, nk, "<Down>")) a.workspace.selected = @min(a.workspace.selected + 1, a.tabs.items.len + workspace.overview_action_count - 1) else if (std.mem.eql(u8, nk, "k") or std.mem.eql(u8, nk, "<Up>")) a.workspace.selected -|= 1 else if (std.mem.eql(u8, nk, "<Home>")) a.workspace.selected = 0 else if (std.mem.eql(u8, nk, "<End>")) a.workspace.selected = a.tabs.items.len + workspace.overview_action_count - 1 else if (std.mem.eql(u8, nk, "<Enter>") or std.mem.eql(u8, nk, "l")) try workspaceItem(a, a.workspace.selected, layout) else if (std.mem.eql(u8, nk, "<Esc>") or std.mem.eql(u8, nk, "<Tab>")) a.sidebar_focus = false;
             a.invalidations.damageAll();
             return true;
         }
@@ -1270,9 +1278,9 @@ pub fn handleMouse(a: *App, m: input.MouseEvent, layout: Layout) !void {
             if (a.workspace.overview and m.row >= layout.file_tree.y and m.row < layout.file_tree.y + layout.file_tree.h) {
                 a.sidebar_focus = true;
                 a.terminal_focus = false;
-                if (m.button == .wheel_down) a.workspace.selected = @min(a.workspace.selected + 1, a.tabs.items.len + 7) else if (m.button == .wheel_up) a.workspace.selected -|= 1 else if (m.button == .left) {
+                if (m.button == .wheel_down) a.workspace.selected = @min(a.workspace.selected + 1, a.tabs.items.len + workspace.overview_action_count - 1) else if (m.button == .wheel_up) a.workspace.selected -|= 1 else if (m.button == .left) {
                     const row = m.row - layout.file_tree.y + a.workspace.scroll;
-                    for (0..a.tabs.items.len + 8) |i| if (workspace.itemRow(i, a.tabs.items.len) == row) {
+                    for (0..a.tabs.items.len + workspace.overview_action_count) |i| if (workspace.itemRow(i, a.tabs.items.len) == row) {
                         a.workspace.selected = i;
                         try workspaceItem(a, i, layout);
                         break;
@@ -1544,9 +1552,7 @@ pub fn handleMouse(a: *App, m: input.MouseEvent, layout: Layout) !void {
     {
         if (a.active_terminal_panel_idx == 0) {
             if (m.action == .press or m.action == .release) a.terminal_focus = true;
-            if (m.button == .wheel_up or m.button == .wheel_down) {
-                nvim_helpers.sendMouseEvent(a.rpc_term, a.allocator, m, m.col - layout.panel.?.x, m.row - layout.panel.?.y - 1);
-            }
+            dispatchTerminalMouse(TerminalMouseTarget{ .rpc = a.rpc_term, .allocator = a.allocator }, m, layout.panel.?, sendTerminalMouse);
         } else if (a.active_terminal_panel_idx == 1) {
             if (m.action == .press and m.button == .wheel_up) a.debug_console.handleScroll(-1);
             if (m.action == .press and m.button == .wheel_down) a.debug_console.handleScroll(1);
@@ -1570,4 +1576,62 @@ pub fn handleMouse(a: *App, m: input.MouseEvent, layout: Layout) !void {
     } else {
         if (m.action == .press) a.terminal_focus = false;
     }
+}
+
+const TerminalPanelShortcut = enum { vertical_split, horizontal_split };
+
+fn terminalPanelShortcut(raw: []const u8) ?TerminalPanelShortcut {
+    if (std.mem.eql(u8, raw, "\x1bv")) return .vertical_split;
+    if (std.mem.eql(u8, raw, "\x1bs")) return .horizontal_split;
+    if (std.mem.eql(u8, raw, "\x14")) return .vertical_split;
+    return null;
+}
+
+test "terminal-normal prefix is forwarded instead of becoming a Tuim shortcut" {
+    try std.testing.expectEqual(TerminalPanelShortcut.vertical_split, terminalPanelShortcut("\x1bv").?);
+    try std.testing.expectEqual(TerminalPanelShortcut.horizontal_split, terminalPanelShortcut("\x1bs").?);
+    try std.testing.expect(terminalPanelShortcut("\x1c") == null);
+}
+
+const TerminalMouseTarget = struct {
+    rpc: *@import("../nvim/rpc.zig").RpcClient,
+    allocator: std.mem.Allocator,
+};
+
+fn sendTerminalMouse(target: TerminalMouseTarget, m: input.MouseEvent, col: u16, row: u16) void {
+    nvim_helpers.sendMouseEvent(target.rpc, target.allocator, m, col, row);
+}
+
+fn dispatchTerminalMouse(context: anytype, m: input.MouseEvent, panel: layout_mod.Rect, comptime send: anytype) void {
+    if (m.button == .none) return;
+    send(context, m, m.col - panel.x, m.row - panel.y - 1);
+}
+
+test "terminal panel dispatches press drag and release but ignores passive motion" {
+    const Recorder = struct {
+        events: [3]input.MouseEvent = undefined,
+        cols: [3]u16 = undefined,
+        rows: [3]u16 = undefined,
+        count: usize = 0,
+
+        fn record(self: *@This(), m: input.MouseEvent, col: u16, row: u16) void {
+            self.events[self.count] = m;
+            self.cols[self.count] = col;
+            self.rows[self.count] = row;
+            self.count += 1;
+        }
+    };
+    const panel = layout_mod.Rect{ .x = 10, .y = 5, .w = 20, .h = 8 };
+    var recorder = Recorder{};
+    dispatchTerminalMouse(&recorder, .{ .col = 11, .row = 6, .button = .left, .action = .press }, panel, Recorder.record);
+    dispatchTerminalMouse(&recorder, .{ .col = 14, .row = 7, .button = .left, .action = .move }, panel, Recorder.record);
+    dispatchTerminalMouse(&recorder, .{ .col = 14, .row = 7, .button = .left, .action = .release }, panel, Recorder.record);
+    dispatchTerminalMouse(&recorder, .{ .col = 15, .row = 8, .button = .none, .action = .move }, panel, Recorder.record);
+
+    try std.testing.expectEqual(@as(usize, 3), recorder.count);
+    try std.testing.expectEqual(input.MouseAction.press, recorder.events[0].action);
+    try std.testing.expectEqual(input.MouseAction.move, recorder.events[1].action);
+    try std.testing.expectEqual(input.MouseAction.release, recorder.events[2].action);
+    try std.testing.expectEqual(@as(u16, 4), recorder.cols[2]);
+    try std.testing.expectEqual(@as(u16, 1), recorder.rows[2]);
 }

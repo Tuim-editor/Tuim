@@ -6,10 +6,13 @@ import io
 import json
 import os
 from pathlib import Path
+import pty
+import select
 import shutil
 import subprocess
 import tarfile
 import tempfile
+import time
 
 ROOT = Path(__file__).resolve().parents[1]
 BASH = shutil.which('bash')
@@ -121,6 +124,120 @@ shutil.copyfile(source,target)
                                 start_new_session=True, timeout=30)
         return home, result
 
+    def piped_install_with_tty(name, answer):
+        """Run the documented curl-pipe shape with a controlling terminal."""
+        home = base / name
+        home.mkdir(exist_ok=True)
+        dependency_bin = home / 'dependency-bin'
+        dependency_bin.mkdir()
+        installed = home / 'git-installed'
+        package_calls = home / 'package-calls.log'
+        executable(dependency_bin / 'git', f'''#!/bin/sh
+test -f {str(installed)!r}
+''')
+        for dependency in ('cc', 'make', 'unzip', 'rg'):
+            executable(dependency_bin / dependency, '#!/bin/sh\nexit 0\n')
+        executable(dependency_bin / 'apt-get', f'''#!/bin/sh
+printf '%s\\n' "$*" >> {str(package_calls)!r}
+if [ "$1" = install ]; then touch {str(installed)!r}; fi
+''')
+        executable(dependency_bin / 'sudo', '''#!/bin/sh
+exec "$@"
+''')
+        runenv = env | {
+            'HOME': str(home),
+            'PATH': str(dependency_bin) + ':' + env['PATH'],
+            'TUIM_TEST_MISSING': 'git',
+            'TUIM_TEST_PACKAGE_MANAGER': 'apt',
+            'TUIM_TEST_ONLY': '1',
+        }
+        pid, terminal = pty.fork()
+        if pid == 0:
+            script_input = os.open(ROOT / 'setup.sh', os.O_RDONLY)
+            os.dup2(script_input, 0)
+            os.close(script_input)
+            os.execve(BASH, [BASH, '-s'], runenv)
+        output = bytearray()
+        deadline = time.monotonic() + 10
+        answered = False
+        status = None
+        while time.monotonic() < deadline:
+            ready, _, _ = select.select([terminal], [], [], 0.1)
+            if ready:
+                try:
+                    output.extend(os.read(terminal, 4096))
+                except OSError:
+                    pass
+            if not answered and b'Missing dependencies:' in output:
+                os.write(terminal, answer.encode() + b'\n')
+                answered = True
+            waited, wait_status = os.waitpid(pid, os.WNOHANG)
+            if waited:
+                status = wait_status
+                break
+        if status is None:
+            os.kill(pid, 9)
+            os.waitpid(pid, 0)
+            raise AssertionError('interactive setup timed out: ' + output.decode(errors='replace'))
+        while select.select([terminal], [], [], 0)[0]:
+            try:
+                output.extend(os.read(terminal, 4096))
+            except OSError:
+                break
+        os.close(terminal)
+        return os.waitstatus_to_exitcode(status), output.decode(errors='replace'), package_calls
+
+    status, output, package_calls = piped_install_with_tty('piped-dependency-consent', 'y')
+    assert status == 0, output
+    assert 'Install system dependencies now? [y/N] ' in output, output
+    assert package_calls.read_text().splitlines() == ['update', 'install -y git']
+
+    status, output, package_calls = piped_install_with_tty('piped-dependency-decline', 'n')
+    assert status != 0
+    assert 'Install system dependencies now? [y/N] ' in output, output
+    assert 'Dependency installation declined.' in output, output
+    assert not package_calls.exists(), 'declining consent must not invoke the package manager'
+
+    manager_expectations = {
+        'apt': ('Linux', ['update', 'install -y git']),
+        'pacman': ('Linux', ['-S --needed --noconfirm git']),
+        'dnf': ('Linux', ['install -y git']),
+        'zypper': ('Linux', ['install -y git']),
+        'brew': ('Darwin', ['install git']),
+    }
+    for manager, (platform, expected_calls) in manager_expectations.items():
+        home = base / f'yes-{manager}'
+        home.mkdir()
+        dependency_bin = home / 'dependency-bin'
+        dependency_bin.mkdir()
+        installed = home / 'git-installed'
+        package_calls = home / 'package-calls.log'
+        executable(dependency_bin / 'git', f'#!/bin/sh\ntest -f {str(installed)!r}\n')
+        for dependency in ('cc', 'make', 'unzip', 'rg'):
+            executable(dependency_bin / dependency, '#!/bin/sh\nexit 0\n')
+        executable(dependency_bin / 'xcrun', '#!/bin/sh\nexit 0\n')
+        command = 'apt-get' if manager == 'apt' else manager
+        install_test = '[ "$1" = install ]' if manager == 'apt' else 'true'
+        executable(dependency_bin / command, f'''#!/bin/sh
+printf '%s\\n' "$*" >> {str(package_calls)!r}
+if {install_test}; then touch {str(installed)!r}; fi
+''')
+        executable(dependency_bin / 'sudo', '#!/bin/sh\nexec "$@"\n')
+        runenv = env | {
+            'HOME': str(home),
+            'PATH': str(dependency_bin) + ':' + env['PATH'],
+            'TUIM_TEST_MISSING': 'git',
+            'TUIM_TEST_PACKAGE_MANAGER': manager,
+            'TUIM_TEST_ONLY': '1',
+            'TUIM_TEST_PLATFORM': platform,
+        }
+        result = subprocess.run(
+            [BASH, str(ROOT / 'setup.sh'), '--yes'], text=True,
+            capture_output=True, env=runenv, cwd=home, start_new_session=True, timeout=10)
+        assert result.returncode == 0, manager + ': ' + result.stdout + result.stderr
+        assert package_calls.read_text().splitlines() == expected_calls
+        assert 'Install system dependencies now?' not in result.stdout + result.stderr
+
     home, result = install('piped install with spaces', pipe=True, overrides={'TUIM_DISABLE_PLUGINS': '1'})
     assert result.returncode == 0, result.stdout + result.stderr
     launcher = home / '.local/bin/tuim'
@@ -159,8 +276,9 @@ shutil.copyfile(source,target)
     assert '/tuim/v9.8.7/src/nvim/tuim_init.lua' in calls.read_text()
     make_release(files)
 
-    _, result = install('no-tty', args=(), overrides={'TUIM_TEST_MISSING': 'git'})
+    _, result = install('no-tty', args=(), pipe=True, overrides={'TUIM_TEST_MISSING': 'git'})
     assert result.returncode != 0 and 'Use --yes' in result.stderr
+    assert '/dev/tty' not in result.stderr, result.stderr
 
     project = base / 'source project'
     project.mkdir()
@@ -177,4 +295,4 @@ shutil.copyfile(source,target)
     assert 'source fixture' in launched
     assert 'PATH=.' not in source_launcher.read_text()
 
-print('Installer passed: piped fresh install, upgrade preservation, checksum rejection, invalid bundle, bootstrap failure, no-plugins, legacy bundle, no TTY, private source toolchains')
+print('Installer passed: dependency consent, all package managers, piped fresh install, upgrade preservation, checksum rejection, invalid bundle, bootstrap failure, no-plugins, legacy bundle, no TTY, private source toolchains')

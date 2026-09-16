@@ -30,6 +30,7 @@ pub const RpcClient = struct {
     async_read_pending: bool = false,
     handlers: [async_transport.max_pending_requests]?HandlerEntry = [_]?HandlerEntry{null} ** async_transport.max_pending_requests,
     handler_len: usize = 0,
+    completions_dispatched: bool = false,
 
     pub fn init(process: NvimProcess, allocator: std.mem.Allocator, io: std.Io) RpcClient {
         return .{
@@ -336,6 +337,12 @@ pub const RpcClient = struct {
         return self.transport.takeCompletion();
     }
 
+    pub fn takeCompletionsDispatched(self: *RpcClient) bool {
+        const dispatched = self.completions_dispatched;
+        self.completions_dispatched = false;
+        return dispatched;
+    }
+
     pub fn cancelAsync(self: *RpcClient, id: async_transport.RequestId) bool {
         return self.transport.cancel(id);
     }
@@ -458,6 +465,7 @@ pub const RpcClient = struct {
             std.mem.copyForwards(?HandlerEntry, self.handlers[index .. self.handler_len - 1], self.handlers[index + 1 .. self.handler_len]);
             self.handler_len -= 1;
             self.handlers[self.handler_len] = null;
+            self.completions_dispatched = true;
             try handler.callback(handler.context, completion);
             return;
         }
@@ -632,3 +640,38 @@ pub const FdReader = struct {
         }
     }
 };
+
+test "completion handler dispatch latch is sticky and read once" {
+    var client: RpcClient = .{
+        .process = undefined,
+        .allocator = std.testing.allocator,
+        .io = std.testing.io,
+        .reader = FdReader.init(-1, std.testing.allocator),
+        .incremental_reader = incremental.Decoder.init(std.testing.allocator),
+        .transport = async_transport.Transport.init(std.testing.allocator),
+    };
+    defer client.deinit();
+    client.enableAsyncTransport();
+
+    const Handler = struct {
+        fn record(context: ?*anyopaque, _: *async_transport.Completion) anyerror!void {
+            const calls: *usize = @ptrCast(@alignCast(context.?));
+            calls.* += 1;
+        }
+    };
+
+    var calls: usize = 0;
+    const handled_id = try client.requestAsyncWithHandler("handled", &.{}, &calls, Handler.record);
+    try std.testing.expect(client.cancelAsync(handled_id));
+    try client.progressAsyncDeadlines(0);
+    try std.testing.expectEqual(@as(usize, 1), calls);
+
+    _ = try client.requestAsyncWithDeadline("unhandled", &.{}, 1);
+    try client.progressAsyncDeadlines(1);
+    try std.testing.expect(client.takeCompletionsDispatched());
+    try std.testing.expect(!client.takeCompletionsDispatched());
+
+    _ = try client.requestAsyncWithDeadline("still-unhandled", &.{}, 2);
+    try client.progressAsyncDeadlines(2);
+    try std.testing.expect(!client.takeCompletionsDispatched());
+}

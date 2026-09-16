@@ -1,5 +1,11 @@
 vim.g.tuim_is_terminal = true
 vim.opt.termguicolors = true
+vim.opt.mouse = 'a'
+local clipboard_available = vim.fn.has('clipboard') == 1
+vim.g.tuim_terminal_clipboard_provider = clipboard_available
+if clipboard_available then
+    vim.opt.clipboard:append('unnamedplus')
+end
 vim.opt.laststatus = 0
 vim.opt.showmode = false
 vim.opt.ruler = false

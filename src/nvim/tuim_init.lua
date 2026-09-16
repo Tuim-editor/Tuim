@@ -2179,7 +2179,6 @@ vim.keymap.set({'i', 'n', 'v', 't'}, '<M-k>', function() _G.tuim_wincmd('k') end
 vim.keymap.set({'i', 'n', 'v', 't'}, '<M-l>', function() _G.tuim_wincmd('l') end, { silent = true })
 
 vim.keymap.set({'i', 'n', 'v', 't'}, '<M-v>', function() vim.cmd("vsplit") end, { silent = true })
-vim.keymap.set({'i', 'n', 'v', 't'}, '<C-\\>', function() vim.cmd("vsplit") end, { silent = true })
 vim.keymap.set({'i', 'n', 'v', 't'}, '<M-s>', function() vim.cmd("split") end, { silent = true })
 vim.keymap.set({'i', 'n', 'v', 't'}, '<M-c>', function() vim.cmd("close") end, { silent = true })
 vim.keymap.set({'i', 'n', 'v', 't'}, '<M-o>', function() vim.cmd("wincmd w") end, { silent = true })

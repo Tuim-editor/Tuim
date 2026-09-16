@@ -69,6 +69,7 @@ def run(capture=None, mode="normal"):
             text("\x1b[<0;4;2M\x1b[<0;4;2m")
             normal = wait_for(lambda s: "WORKSPACE" in s and "sample.zig" in s and "OPEN FILES" in s, "Workspace did not render")
             assert "[?] Help" not in normal, "Legacy status chrome remains"
+            assert "Language tools" in normal, "Workspace did not expose language tools"
             if capture:
                 destination = pathlib.Path(capture)
                 destination.mkdir(parents=True, exist_ok=True)
@@ -102,6 +103,23 @@ def run(capture=None, mode="normal"):
             text(f"\x1b[<0;4;{file_row + 1}M\x1b[<0;4;{file_row + 1}m")
             wait_for(lambda s: "Editor" in s.splitlines()[-1], "Mouse file selection did not focus editor")
 
+            # Language tools are a first-class workspace row and command. Closing
+            # the modal restores whichever workspace region launched it.
+            send("F6", "End", "Up", "Enter")
+            wait_for(lambda s: "Mason Package Manager" in s, "Workspace keyboard did not open language tools")
+            send("Escape")
+            wait_for(lambda s: "Mason Package Manager" not in s and "Workspace" in s.splitlines()[-1], "Language tools did not restore sidebar focus")
+            language_row = next(i for i, line in enumerate(screen().splitlines()) if "Language tools" in line)
+            text(f"\x1b[<0;4;{language_row + 1}M\x1b[<0;4;{language_row + 1}m")
+            wait_for(lambda s: "Mason Package Manager" in s, "Workspace mouse did not open language tools")
+            text("\x1b[<0;1;1M\x1b[<0;1;1m")
+            wait_for(lambda s: "Mason Package Manager" not in s and "Workspace" in s.splitlines()[-1], "Outside click did not close language tools to sidebar")
+            send("Escape")
+            palette("language tools")
+            wait_for(lambda s: "Mason Package Manager" in s, "Language tools command did not open native panel")
+            send("Escape")
+            wait_for(lambda s: "Mason Package Manager" not in s and "Editor" in s.splitlines()[-1], "Language tools command did not restore editor focus")
+
             if mode == "normal":
                 send("i")
             text("// saved ")
@@ -130,7 +148,9 @@ def run(capture=None, mode="normal"):
             send("Enter")
             wait_for(lambda s: "Next Region" in s and "Save File" in s, "Shortcut editor did not open")
             send("Right")
-            send(*(["Down"] * 8), "Enter", "F2", "C-s")
+            # focus_next is the tenth and final binding, so index 0 requires
+            # nine Down events. The buffered-input unit test pins exact-once delivery.
+            send(*(["Down"] * 9), "Enter", "F2", "C-s")
             wait_for(lambda _: json.loads((base / "data/tuim/settings.json").read_text()).get("keybindings", {}).get("focus_next") == "<F2>", "Keyboard-only binding edit/save did not persist")
             wait_for(lambda s: "Keybindings / Enter" not in s, "Settings did not close")
             send("F2")
@@ -142,6 +162,10 @@ def run(capture=None, mode="normal"):
 
             palette("terminal")
             wait_for(lambda s: "Terminal" in s.splitlines()[-1], "Terminal did not take focus")
+            palette("new file")
+            wait_for(lambda s: "[No Name]" in s and "Editor" in s.splitlines()[-1], "New file command did not leave terminal focus")
+            send("F6", "F6")
+            wait_for(lambda s: "Terminal" in s.splitlines()[-1], "Terminal did not retake focus")
             text("export TUIM_WORKSPACE_TEST=alive")
             send("Enter")
             time.sleep(0.2)
