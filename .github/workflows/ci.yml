@@ -97,10 +97,24 @@ jobs:
           uname -a
           python3 tests/tty_poll_probe.py 2>&1 | tee -a "$RUNNER_TEMP/macos-smoke.log"
       - name: Test controlling terminal input on macOS
-        timeout-minutes: 2
+        timeout-minutes: 6
         run: |
           set -o pipefail
-          python3 tests/controlling_tty.py 2>&1 | tee -a "$RUNNER_TEMP/macos-smoke.log"
+          for i in 1 2 3; do
+            echo "=== NEW terminal.zig attempt $i ==="
+            python3 tests/controlling_tty.py 2>&1 | tee -a "$RUNNER_TEMP/macos-smoke.log"
+          done
+      - name: DEBUG rerun with the pre-fix terminal.zig
+        if: always()
+        timeout-minutes: 8
+        run: |
+          cp tests/terminal_old_debug.zig src/tui/terminal.zig
+          zig build
+          for i in 1 2 3; do
+            echo "=== OLD terminal.zig attempt $i ==="
+            python3 tests/controlling_tty.py 2>&1 || echo "OLD attempt $i FAILED"
+          done
+          git checkout src/tui/terminal.zig
       - name: Test IDE mode on macOS
         timeout-minutes: 5
         run: |
