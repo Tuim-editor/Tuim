@@ -1544,6 +1544,7 @@ const TerminalPanelShortcut = enum { vertical_split, horizontal_split };
 fn terminalPanelShortcut(raw: []const u8) ?TerminalPanelShortcut {
     if (std.mem.eql(u8, raw, "\x1bv")) return .vertical_split;
     if (std.mem.eql(u8, raw, "\x1bs")) return .horizontal_split;
+    if (std.mem.eql(u8, raw, "\x14")) return .vertical_split;
     return null;
 }
 

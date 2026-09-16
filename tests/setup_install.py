@@ -171,8 +171,9 @@ exec "$@"
             if not answered and b'Missing dependencies:' in output:
                 os.write(terminal, answer.encode() + b'\n')
                 answered = True
-            waited, status = os.waitpid(pid, os.WNOHANG)
+            waited, wait_status = os.waitpid(pid, os.WNOHANG)
             if waited:
+                status = wait_status
                 break
         if status is None:
             os.kill(pid, 9)
