@@ -263,7 +263,7 @@ local plugins_setup = {
                 
                 local kb = state.keybindings or {}
                 local raw_new = kb.new_file or "<C-n>"
-                local raw_find = kb.find_file or "<C-f>"
+                local raw_find = kb.find_file or "<C-p>"
                 local raw_search = kb.search_project or "<M-g>"
                 local raw_quit = kb.quit or "<C-q>"
                 local raw_recent = "<C-r>"
@@ -964,6 +964,16 @@ _G.tuim_close_split = function(winid, bufnr)
     return ok
 end
 
+-- Turn a raw :write error (with Lua traceback) into one readable line.
+_G.tuim_save_error_message = function(err, target)
+    if err:match('E45:') or err:match('E505:') then return 'Cannot save: file is read-only' end
+    local dir = vim.fn.fnamemodify(target, ':h')
+    if err:match('E212:') and dir ~= '' and not vim.uv.fs_stat(dir) then
+        return 'Cannot save: directory ' .. vim.fn.fnamemodify(dir, ':~:.') .. '/ does not exist'
+    end
+    return 'Cannot save: ' .. (err:match('(E%d+:[^\n]*)') or err:match('^[^\n]*'))
+end
+
 -- All native save actions share first-save naming, including offline sessions.
 _G.tuim_save_file = function()
     if save_prompt_buffer then return end
@@ -979,8 +989,9 @@ _G.tuim_save_file = function()
         else
             -- A failed :write may assign the name before discovering an I/O error.
             -- Keep first-save naming available so the user can correct the path.
+            local target = path or vim.api.nvim_buf_get_name(bufnr)
             if was_unnamed then pcall(vim.api.nvim_buf_set_name, bufnr, '') end
-            _G.tuim_native_notice('error', 'Could not save file: ' .. tostring(err))
+            _G.tuim_native_notice('error', _G.tuim_save_error_message(tostring(err), target))
         end
     end
     if vim.api.nvim_buf_get_name(bufnr) ~= '' or vim.bo[bufnr].buftype ~= '' then
@@ -1016,17 +1027,31 @@ _G.tuim_ide_action = function(action)
     if action == 'save' then _G.tuim_save_file()
     elseif action == 'undo' then pcall(vim.cmd, 'undo')
     elseif action == 'redo' then pcall(vim.cmd, 'redo')
-    elseif action == 'select_all' then vim.cmd('normal! ggVG'); return
-    elseif action == 'select_line' then vim.cmd('normal! V'); return
+    elseif action == 'select_all' or action == 'select_line' then
+        -- `:normal! V` from an insert-mode mapping leaves Visual half-entered:
+        -- later keys still resolve as Insert mode, so copy/cut never saw a selection.
+        if mode:sub(1, 1) ~= 'i' then vim.cmd(action == 'select_all' and 'normal! ggVG' or 'normal! V'); return end
+        local keys = action == 'select_all' and '<C-o>gg<C-o>VG' or '<C-o>V'
+        -- 'ni' prepends: keys batched behind this one must not run before the selection exists.
+        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(keys, true, false, true), 'ni', false)
+        return
     elseif action == 'copy' and visual then
         vim.cmd('normal! "' .. ide_clipboard_register() .. 'y')
     elseif action == 'cut' and visual then
         vim.cmd('normal! "' .. ide_clipboard_register() .. 'd')
     elseif action == 'paste' then
-        if visual then vim.cmd('normal! "_d') end
-        vim.cmd('normal! "' .. ide_clipboard_register() .. 'p')
-    elseif action == 'find' then vim.cmd('Telescope current_buffer_fuzzy_find')
-    elseif action == 'replace' then vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(':%s/', true, false, true), 'n', false); return
+        -- Visual P replaces the selection without clobbering the clipboard.
+        vim.cmd('normal! "' .. ide_clipboard_register() .. (visual and 'P' or 'p'))
+    elseif action == 'find' then
+        if vim.fn.exists(':Telescope') == 2 then vim.cmd('Telescope current_buffer_fuzzy_find')
+        else
+            vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes((mode:sub(1, 1) == 'i' and '<C-o>' or visual and '<Esc>' or '') .. '/', true, false, true), 'ni', false)
+            return
+        end
+    elseif action == 'replace' then
+        -- Like find: <C-o> from Insert, so ':%s/' opens the command line instead of being typed.
+        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes((mode:sub(1, 1) == 'i' and '<C-o>' or visual and '<Esc>' or '') .. ':%s/', true, false, true), 'ni', false)
+        return
     elseif action == 'new' then vim.cmd('enew')
     elseif action == 'close' then _G.tuim_close_buffer(vim.api.nvim_get_current_buf())
     elseif action == 'next_buffer' then vim.cmd('bnext')
@@ -1855,7 +1880,7 @@ _G.tuim_alpha_start = function()
     local lines = {
         '', '  tuim / ' .. vim.fn.fnamemodify(vim.fn.getcwd(), ':t'), '',
         '  New file          Ctrl+N',
-        '  Find file         Ctrl+F', '',
+        '  Find file         Ctrl+P', '',
         '  Commands          F1',
         '  Quit              Ctrl+Q',
     }
@@ -1876,7 +1901,14 @@ if vim.fn.argc() == 0 and not vim.g.tuim_is_terminal then
 end
 
 -- Nmux42 Bindings
-vim.keymap.set("n", "<leader>e", "<cmd>Neotree toggle<cr>", { desc = "Toggle Neo-tree" })
+-- Plugin commands are absent in recovery sessions (TUIM_DISABLE_PLUGINS=1).
+local function plugin_command(command)
+    return function()
+        if vim.fn.exists(':' .. command:match('^%S+')) == 2 then vim.cmd(command)
+        else _G.tuim_native_notice("warning", command:match('^%S+') .. " is unavailable while plugins are disabled.") end
+    end
+end
+vim.keymap.set("n", "<leader>e", plugin_command("Neotree toggle"), { desc = "Toggle Neo-tree" })
 vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv")
 vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv")
 vim.keymap.set("n", "J", "mzJ`z")
@@ -1897,7 +1929,7 @@ vim.keymap.set("n", "<leader>s", [[:s/\<<C-r><C-w>\>//gI<Left><Left><Left>]])
 vim.keymap.set("n", "<leader>x", "<cmd>!chmod +x %<CR>", { silent = true })
 vim.keymap.set('n', '<leader>y', '<Plug>OSCYankOperator')
 vim.keymap.set('v', '<leader>y', '<Plug>OSCYankVisual')
-vim.keymap.set("n", "<leader>u", vim.cmd.UndotreeToggle)
+vim.keymap.set("n", "<leader>u", plugin_command("UndotreeToggle"))
 vim.keymap.set("n", "<leader>cl", ":cclose<CR>", { silent = true })
 vim.keymap.set("n", "<leader>co", ":copen<CR>", { silent = true })
 vim.keymap.set("n", "<leader>cn", ":cnext<CR>zz")
