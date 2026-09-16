@@ -1024,7 +1024,6 @@ fn runNvimSession(
                 return;
             };
             if (!alive_term) {
-                if (app.quit_requested) return error.QuitApplication;
                 return;
             }
             if (readiness.terminal_failed) {
@@ -1254,7 +1253,6 @@ fn runNvimSession(
                             },
                             else => return err,
                         };
-                        if (app.quit_requested) return error.QuitApplication;
                     },
                     .paste => |p| {
                         if (app.workspace.palette) {

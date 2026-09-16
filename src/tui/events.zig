@@ -766,11 +766,15 @@ pub fn handleKey(a: *App, k: input.KeyEvent, layout: Layout) !bool {
         try workspaceAction(a, .find_file, layout);
         return true;
     } else if (quit) {
-        a.quit_requested = true;
-        const cmd_p = [1]Value{.{ .string = "vim.cmd('qa!')" }};
-        const params = [2]Value{ cmd_p[0], .{ .array = &[_]Value{} } };
-        a.rpc.notify("nvim_exec_lua", &params) catch {};
-        a.rpc_term.notify("nvim_exec_lua", &params) catch {};
+        // Neovim owns the modified-buffer decision, including multiple
+        // buffers and unnamed buffers.
+        // Let the editor exit drive Tuim's shutdown so Cancel keeps us alive.
+        a.sidebar_focus = false;
+        a.terminal_focus = false;
+        const params = [1]Value{.{ .string = "confirm qall" }};
+        a.rpc.notify("nvim_command", &params) catch |err| {
+            a.notify(.failure, "Unable to quit: {}", .{err});
+        };
         return true;
     }
 

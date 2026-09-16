@@ -2381,7 +2381,7 @@ local TUIM_KEYS = {
     "",
     "  ── VSCODE-LIKE ESSENTIALS ──────────────────────────────────────",
     "  Ctrl+S                 Save file",
-    "  Ctrl+Q                 Force quit Tuim",
+    "  Ctrl+Q                 Quit Tuim (confirm unsaved changes)",
     "  Ctrl+W                 Close current Tab/Buffer",
     "  Ctrl+N / Ctrl+T        Open new Tab/Buffer",
     "  Ctrl+Tab               Next Tab",

@@ -107,7 +107,6 @@ pub const App = struct {
     last_explorer_refresh: i64 = 0,
 
     show_split_menu: bool = false,
-    quit_requested: bool = false,
     split_menu_dir: enum { right, bottom } = .right,
     split_menu_x: u16 = 0,
     split_menu_y: u16 = 0,

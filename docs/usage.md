@@ -98,7 +98,7 @@ These shipped mappings apply primarily in Normal mode (`Leader = Space`). IDE mo
 | Action | Keybinding |
 | :--- | :--- |
 | **Save file** | `Ctrl + S` |
-| **Force quit Tuim** | `Ctrl + Q` |
+| **Quit Tuim (confirm unsaved changes)** | `Ctrl + Q` |
 | **Open new buffer** | `Ctrl + N` |
 | **Find files (Telescope, with a filename prompt when plugins are unavailable)** | `Space f f` or `Ctrl + P` |
 | **Search project text with ripgrep (Telescope)** | `Space f g` or `Alt + G` |
