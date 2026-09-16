@@ -85,7 +85,15 @@ def run_controlling_tty():
 
             deadline = time.monotonic() + 10.0
             while time.monotonic() < deadline:
-                os.write(fd, b"\x11")  # Ctrl-Q
+                try:
+                    os.write(fd, b"\x11")  # Ctrl-Q
+                except OSError as exc:  # EIO: the child closed the pty already
+                    waited, status = os.waitpid(pid, os.WNOHANG)
+                    if waited != 0:
+                        break
+                    raise AssertionError(
+                        "pty master write failed (%s) while Tuim was still running\n" % exc
+                        + diagnose(pid, base / "data/tuim", output))
                 output.extend(read_available(fd, min(deadline, time.monotonic() + 0.4)))
                 waited, status = os.waitpid(pid, os.WNOHANG)
                 if waited != 0:

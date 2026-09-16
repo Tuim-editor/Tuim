@@ -98,7 +98,7 @@ jobs:
           git show origin/main:src/tui/terminal.zig > "$RUNNER_TEMP/v_main.zig"
           git show origin/fix/macos-input-and-qa-bugs:src/tui/terminal.zig > "$RUNNER_TEMP/v_prfix.zig"
           cp src/tui/terminal.zig "$RUNNER_TEMP/v_mine.zig"
-          for v in main prfix mine; do
+          for v in prfix mine; do
             cp "$RUNNER_TEMP/v_$v.zig" src/tui/terminal.zig
             sha=$(shasum -a 256 src/tui/terminal.zig | cut -d' ' -f1)
             n=$(grep -c isPollable src/tui/terminal.zig || true)
@@ -107,7 +107,7 @@ jobs:
               echo "ABORT: origin/main copy is not the pre-fix file"; exit 1
             fi
             zig build
-            for i in 1 2 3; do
+            for i in 1 2 3 4 5 6 7 8; do
               if python3 tests/controlling_tty.py > "$RUNNER_TEMP/ab-$v-$i.txt" 2>&1; then
                 echo "RESULT $v attempt $i PASS"
               else
