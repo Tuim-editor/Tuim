@@ -56,3 +56,4 @@ about GUI-style modifier sequences under tmux, SSH, WSL, dumb terminals, and
 the Linux console. Unicode renderer tests cover ASCII, CJK, emoji, combining
 marks, variation selectors, Nerd Font symbols, continuation cells, and
 clipping. The PTY suite sends CJK and emoji input in every editing mode.
+
