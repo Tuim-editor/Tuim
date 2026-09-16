@@ -9,6 +9,8 @@ import pty
 import select
 import signal
 import struct
+import subprocess
+import sys
 import tempfile
 import termios
 import time
@@ -32,6 +34,26 @@ def read_available(fd, deadline):
             break
         output.extend(chunk)
     return bytes(output)
+
+
+def diagnose(pid, data_dir, output):
+    """Explain a stuck child: its last output, its log, and where it is stuck."""
+    report = ["output tail: %r" % bytes(output[-2000:]).decode("utf-8", errors="replace")]
+    try:  # the log may be missing, unreadable, or rotated away under us
+        log = (data_dir / "tuim.log").read_text(encoding="utf-8", errors="replace")[-4000:]
+    except OSError as exc:
+        log = "<unreadable: %s>" % exc
+    report.append("tuim.log tail:\n%s" % log)
+    # /proc/<pid>/stack needs CAP_SYS_ADMIN, so read status on Linux instead.
+    for cmd in (["ps", "-o", "pid,stat,wchan,%cpu,command", "-p", str(pid)],
+                ["sample", str(pid), "1", "-mayDie"] if sys.platform == "darwin" else
+                ["cat", "/proc/%d/status" % pid]):
+        try:
+            out = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            report.append("$ %s\n%s%s" % (" ".join(cmd), out.stdout, out.stderr))
+        except Exception as exc:  # diagnostics must never mask the real failure
+            report.append("$ %s -> %s" % (" ".join(cmd), exc))
+    return "\n\n".join(report)
 
 
 def run_controlling_tty():
@@ -66,12 +88,24 @@ def run_controlling_tty():
 
             deadline = time.monotonic() + 10.0
             while time.monotonic() < deadline:
-                os.write(fd, b"\x11")  # Ctrl-Q
-                read_available(fd, min(deadline, time.monotonic() + 0.4))
+                try:
+                    os.write(fd, b"\x11")  # Ctrl-Q
+                except OSError as exc:  # EIO: the child closed the pty already
+                    waited, status = os.waitpid(pid, os.WNOHANG)
+                    if waited != 0:
+                        break
+                    raise AssertionError(
+                        "pty master write failed (%s) while Tuim was still running\n" % exc
+                        + diagnose(pid, base / "data/tuim", output))
+                output.extend(read_available(fd, min(deadline, time.monotonic() + 0.4)))
+                del output[:-8192]  # a redraw loop must not exhaust memory before we report
                 waited, status = os.waitpid(pid, os.WNOHANG)
                 if waited != 0:
                     break
-            assert waited != 0, "Tuim did not exit within 10s of Ctrl-Q with a controlling tty"
+            if waited == 0:
+                raise AssertionError(
+                    "Tuim did not exit within 10s of Ctrl-Q with a controlling tty\n"
+                    + diagnose(pid, base / "data/tuim", output))
         finally:
             if waited == 0:
                 os.kill(pid, signal.SIGKILL)
