@@ -29,6 +29,7 @@ jobs:
       - name: Run pseudo-terminal integration tests
         run: |
           zig build
+          python3 tests/controlling_tty.py
           python3 tests/pty_integration.py
           python3 tests/default_runtime.py
       - name: Test plugin management and Extensions UI
@@ -88,6 +89,11 @@ jobs:
           set -o pipefail
           zig build test 2>&1 | tee "$RUNNER_TEMP/macos-smoke.log"
           zig build 2>&1 | tee -a "$RUNNER_TEMP/macos-smoke.log"
+      - name: Test controlling terminal input on macOS
+        timeout-minutes: 2
+        run: |
+          set -o pipefail
+          python3 tests/controlling_tty.py 2>&1 | tee -a "$RUNNER_TEMP/macos-smoke.log"
       - name: Test IDE mode on macOS
         timeout-minutes: 5
         run: |
