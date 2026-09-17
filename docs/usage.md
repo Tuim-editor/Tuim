@@ -111,7 +111,7 @@ These shipped mappings apply primarily in Normal mode (`Leader = Space`). IDE mo
 | **Close current editor split** | `Ctrl + W`, then `Q` |
 | **Open editor settings** | `Space t h` |
 | **Delete without yanking** | `Space d` |
-| **Substitute word everywhere** | `Space s` |
+| **Substitute word on current line** | `Space s` |
 | **Paste over selection** | `Space p` (Visual) |
 | **Scroll half page down (centered)** | `Ctrl + D` |
 | **Scroll half page up (centered)** | `Ctrl + U` |
