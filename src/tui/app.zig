@@ -114,6 +114,7 @@ pub const App = struct {
     editor_win_count: usize = 1,
     terminal_win_count: usize = 1,
     deferred_exit: @import("../nvim/call_sites_05c.zig").DeferredExit = .none,
+    quit_pending: bool = false,
 
     sidebar_focus: bool = false,
     workspace: @import("workspace.zig").State = .{},

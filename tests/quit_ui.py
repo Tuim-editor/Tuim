@@ -28,6 +28,9 @@ def run_mode(mode):
         def screen():
             return tmux("capture-pane", "-p", "-t", "ui")
 
+        def norm_screen():
+            return " ".join(screen().split())
+
         def wait_for(predicate, description, timeout=8):
             deadline = time.monotonic() + timeout
             while time.monotonic() < deadline:
@@ -95,6 +98,39 @@ def run_mode(mode):
             wait_for(dead, "Save did not exit")
             assert "changed " in sample.read_text(), f"Save did not write the edited file: {sample.read_text()!r}"
 
+            # Esc must act as Cancel.
+            launch()
+            insert("esc edit ")
+            send("C-q")
+            wait_for(lambda: "Save changes" in screen(), "esc scenario did not prompt")
+            send("Escape")
+            wait_for(lambda: "Save changes" not in screen() and "esc edit" in screen(), "Esc did not cancel quit")
+            assert not dead()
+            assert "esc edit" not in sample.read_text()
+            send("C-q")
+            wait_for(lambda: "Save changes" in screen(), "quit after Esc did not prompt")
+            send("n")
+            wait_for(dead, "discard after Esc did not exit")
+
+            # Repeated Ctrl+Q must not queue multiple quit dialogs; Cancel
+            # must return to the editor without subsequent keystrokes quitting.
+            launch()
+            insert("double quit edit ")
+            send("C-q", "C-q")
+            wait_for(lambda: "Save changes" in screen(), "double Ctrl+Q did not prompt")
+            send("c")
+            wait_for(lambda: "Save changes" not in screen() and "double quit edit" in screen(), "Cancel after double Ctrl+Q failed")
+            assert not dead()
+            # Typing 'and' must not trigger 'n' (No/discard) from a queued dialog.
+            insert("and more")
+            wait_for(lambda: "and more" in screen(), "typing after double Ctrl+Q cancel failed")
+            assert not dead()
+            assert "double quit edit" not in sample.read_text()
+            send("C-q")
+            wait_for(lambda: "Save changes" in screen(), "quit after cancel did not prompt")
+            send("n")
+            wait_for(dead, "discard did not exit")
+
             launch()
             insert("discarded ")
             send("C-q")
@@ -125,12 +161,59 @@ def run_mode(mode):
             send("C-q")
             wait_for(lambda: 'Save changes to "Untitled"?' in screen(), "new buffer save prompt missing")
             send("y")
-            wait_for(lambda: f'Save changes to "{sample}"?' in screen(), "existing file save prompt missing")
+            wait_for(lambda: f'Save changes to "{sample}"?' in norm_screen(), "existing file save prompt missing")
             send("y")
             wait_for(dead, "Save for mixed buffers did not exit")
             assert "named edit " in sample.read_text(), "named buffer was not saved"
             assert new_file.exists(), "new buffer was not saved"
             assert "new buffer edit" in new_file.read_text(), f"new buffer content was wrong: {new_file.read_text()!r}"
+            new_file.unlink()
+
+            # A pre-existing "Untitled" file must not be overwritten when
+            # an unnamed buffer is saved. Tuim safely gives the buffer a unique name.
+            pre_existing = base / "Untitled"
+            pre_existing.write_text("precious existing content\n")
+            launch()
+            insert("named edit ")
+            send("C-n")
+            wait_for(lambda: "[No Name]" in screen(), "new buffer did not open")
+            insert("new buffer edit")
+            send("C-q")
+            wait_for(lambda: 'Save changes to "Untitled-1"?' in screen(), "unnamed buffer did not get unique safe name")
+            send("y")
+            wait_for(lambda: f'Save changes to "{sample}"?' in norm_screen(), "sample save prompt missing")
+            send("y")
+            wait_for(dead, "Save with pre-existing Untitled did not exit")
+            assert pre_existing.read_text() == "precious existing content\n", "pre-existing Untitled was overwritten"
+            new_file_1 = base / "Untitled-1"
+            assert new_file_1.exists(), "new Untitled-1 was not created"
+            assert "new buffer edit" in new_file_1.read_text()
+            pre_existing.unlink()
+            new_file_1.unlink()
+
+            # Two unnamed modified buffers must both be preserved without
+            # overwriting each other.
+            launch()
+            send("C-n")
+            wait_for(lambda: "[No Name]" in screen(), "first new buffer did not open")
+            insert("first unnamed edit")
+            send("C-n")
+            wait_for(lambda: "[No Name]" in screen(), "second new buffer did not open")
+            insert("second unnamed edit")
+            send("C-q")
+            wait_for(lambda: "Save changes" in screen(), "two unnamed buffers did not prompt")
+            send("y")
+            wait_for(lambda: "Save changes" in screen(), "second unnamed buffer did not prompt")
+            send("y")
+            wait_for(dead, "two unnamed buffers save did not exit")
+            u0 = base / "Untitled"
+            u1 = base / "Untitled-1"
+            assert u0.exists() and u1.exists(), "one or both unnamed buffers missing from disk"
+            u_texts = {u0.read_text(), u1.read_text()}
+            assert any("first unnamed edit" in t for t in u_texts), f"first unnamed buffer lost: {u_texts}"
+            assert any("second unnamed edit" in t for t in u_texts), f"second unnamed buffer lost: {u_texts}"
+            u0.unlink()
+            u1.unlink()
 
             # Cancel after saving one of two named buffers must leave the
             # other modified and allow the user to retry quitting.
@@ -141,16 +224,16 @@ def run_mode(mode):
             open_file(second)
             insert("second named edit ")
             send("C-q")
-            wait_for(lambda: f'Save changes to "{second}"?' in screen(), "current named buffer did not prompt first")
+            wait_for(lambda: f'Save changes to "{second}"?' in norm_screen(), "current named buffer did not prompt first")
             send("y")
-            wait_for(lambda: f'Save changes to "{sample}"?' in screen(), "earlier named buffer did not prompt second")
+            wait_for(lambda: f'Save changes to "{sample}"?' in norm_screen(), "earlier named buffer did not prompt second")
             send("c")
             wait_for(lambda: "Save changes" not in screen(), "Cancel after a partial save did not return to Tuim")
             assert not dead()
             assert "first named edit " not in sample.read_text(), "Cancel wrote the unsaved first buffer"
             assert "second named edit " in second.read_text(), "Save did not write the second buffer"
             send("C-q")
-            wait_for(lambda: f'Save changes to "{sample}"?' in screen(), "remaining modified buffer did not prompt")
+            wait_for(lambda: f'Save changes to "{sample}"?' in norm_screen(), "remaining modified buffer did not prompt")
             send("y")
             wait_for(dead, "saving the remaining named buffer did not exit")
             assert "first named edit " in sample.read_text()
@@ -215,4 +298,4 @@ def run_mode(mode):
 if __name__ == "__main__":
     for editor_mode in ("normal", "ide"):
         run_mode(editor_mode)
-    print("Quit UI passed: clean, Cancel, Save, Discard, multiple buffers, and failed writes in Normal and IDE modes")
+    print("Quit UI passed: clean, Cancel, Save, Discard, multiple buffers, safe unnamed naming, repeated Ctrl+Q, Esc, and failed writes in Normal and IDE modes")
