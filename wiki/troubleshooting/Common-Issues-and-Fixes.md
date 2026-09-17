@@ -6,7 +6,7 @@ This page documents common symptoms, platform-specific quirks, and verified fixe
 
 ## 1. Display & Visual Issues
 
-### Broken Icons or Question Mark Glyphs ()
+### Broken Icons or Missing Glyphs
 * **Cause**: Your terminal emulator is not configured to use a font patched with [Nerd Font](https://www.nerdfonts.com/) symbols.
 * **Fix**:
   1. Open <kbd>F1</kbd> → **Settings** → **Appearance**.

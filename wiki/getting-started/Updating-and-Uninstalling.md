@@ -55,7 +55,7 @@ Inside Tuim, open <kbd>F1</kbd> → **Settings** → **About** to see:
 * Active Tuim version and Git commit
 * Bundled Neovim engine version
 * Active Data directory (`~/.local/share/tuim`)
-* Settings path (`~/.config/tuim/settings.json` or `~/.local/share/tuim/settings.json`)
+* Settings path (`~/.local/share/tuim/settings.json`)
 * Active log file path (`~/.local/share/tuim/tuim.log`)
 
 ---
@@ -82,9 +82,9 @@ bash uninstall.sh --all
 
 > [!WARNING]
 > Running `uninstall.sh --all` will permanently delete:
-> - `~/.config/tuim` (Settings)
-> - `~/.local/share/tuim` (Plugins, parsers, private runtimes)
-> - `~/.local/state/tuim/log` and `~/.local/state/tuim/sessions`
+> - `~/.config/tuim` (Config directory)
+> - `~/.local/share/tuim` (Data directory: settings, plugins, `tuim.log`, parsers, private runtimes)
+> - `~/.local/state/tuim/log` and `~/.local/state/tuim/sessions` (State directories)
 > - `~/.cache/tuim` (Cached artifacts)
 >
 > The script will always ask for explicit confirmation before deleting files. For automated environments, pass `--yes`.
@@ -101,11 +101,11 @@ Usage:
 
 Options:
   --binary       Remove only the launcher symlink (~/.local/bin/tuim)
-  --settings     Remove settings directory (~/.config/tuim)
-  --plugins      Remove data/plugins directory (~/.local/share/tuim)
+  --settings     Remove config directory (~/.config/tuim)
+  --plugins      Remove data directory (~/.local/share/tuim: plugins, settings, tuim.log)
   --cache        Remove cache files (~/.cache/tuim)
-  --logs         Remove log files (~/.local/state/tuim/log)
-  --sessions     Remove session state (~/.local/state/tuim/sessions)
+  --logs         Remove state log directory (~/.local/state/tuim/log)
+  --sessions     Remove state session directory (~/.local/state/tuim/sessions)
   --all          Remove all Tuim files across binary, settings, plugins, logs, sessions, cache
   --yes          Skip confirmation prompts
   --help, -h     Show this help message

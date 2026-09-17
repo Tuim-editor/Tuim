@@ -19,10 +19,7 @@ Tuim logs its frontend reactor, RPC traffic errors, and widget lifecycle events 
 ### Inspecting Neovim Internal Messages
 To view messages and errors emitted by the embedded Neovim processes:
 * In Normal mode, type `:messages` and press <kbd>Enter</kbd>.
-* Inspect Neovim's process log if enabled:
-  ```
-  ~/.local/state/tuim/nvim.log
-  ```
+* Uncaught Lua errors, plugin notices, and LSP notifications are recorded in Neovim's internal message buffer.
 
 ---
 
@@ -34,11 +31,11 @@ You can monitor Tuim's log in real-time from a separate terminal window:
 tail -f ~/.local/share/tuim/tuim.log
 ```
 
-Common log markers include:
-* `[reactor]`: Event loop multiplexing, poll descriptors, and resize events.
-* `[rpc]`: MessagePack-RPC request/response dispatches and Neovim multigrid events.
-* `[task_runner]`: Background worker threads and Git status task execution.
-* `[extensions]`: Plugin catalog searches and python backend responses.
+Log entries are prefixed with standard severity levels for easy filtering:
+* `[ERROR]`: Fatal errors, RPC pipe failures, or unrecoverable worker errors.
+* `[WARN]`: Non-fatal issues (e.g. missing clipboard tool, theme fallbacks, unrecognized terminal features).
+* `[INFO]`: Application lifecycle transitions, mode switches, and theme updates.
+* `[DEBUG]`: Verbose dispatch traces and differential redraw metrics.
 
 ---
 

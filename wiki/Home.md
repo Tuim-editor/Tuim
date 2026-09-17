@@ -78,8 +78,8 @@ Tuim Wiki
 * **[Recovery Mode](troubleshooting/Recovery-Mode.md)**: Launching with `TUIM_DISABLE_PLUGINS=1 tuim` to recover from broken plugin configurations.
 * **[Common Issues & Fixes](troubleshooting/Common-Issues-and-Fixes.md)**: Resolving broken font icons, missing clipboard providers, modifier key reporting quirks, and tmux/SSH behavior.
 * **[Logs & Diagnostics](troubleshooting/Logs-and-Diagnostics.md)**: Accessing Tuim log files, Neovim error messages, and system diagnostic snapshots.
-* **[In-App Bug Reporting](troubleshooting/In-App-Bug-Reporting.md)**: Using the built-in bug reporter (`F12` or `Commands > Report bug`) with automatic credential sanitization.
-* **[Bug Report Gateway](troubleshooting/Bug-Report-Gateway.md)**: Technical overview and self-hosting instructions for the Cloudflare Worker reporting proxy.
+* **[In-App Bug Reporting](troubleshooting/In-App-Bug-Reporting.md)**: Built-in bug reporting status and GitHub Issues workflow (*Work in Progress*).
+* **[Bug Report Gateway](troubleshooting/Bug-Report-Gateway.md)**: Cloudflare Worker reporting proxy placeholder and status (*Work in Progress*).
 
 ### 💻 [Architecture & Development](development/Architecture.md)
 * **[Architecture Overview](development/Architecture.md)**: Dual Neovim architecture, Zig event reactor (`src/reactor.zig`), MessagePack-RPC protocol, and differential row-run renderer.

@@ -50,7 +50,7 @@ The profiling suite evaluates **9 automated scenarios** under real terminal cons
 
 ---
 
-## 3. Interpreting the Results
+## 4. Interpreting the Results
 
 * **Machine-Specific Data**: Benchmark timings are hardware- and environment-dependent. When comparing changes, always benchmark against the same physical hardware, terminal dimensions, and filesystem conditions.
 * **Temporary Cleanup**: The generated multi-megabyte files and 5,000-file directories are placed under temporary locations (`/tmp` or `$RUNNER_TEMP`) and automatically deleted after the test finishes.

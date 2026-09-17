@@ -39,9 +39,9 @@ If your terminal emulator uses a font with Nerd Font glyphs installed (e.g., Jet
 ### Portable Symbols Mode
 If you are working on a machine, container, or remote SSH session without a Nerd Font installed:
 1. Open <kbd>F1</kbd> → **Settings** → **Appearance**.
-2. Select **Portable symbols**.
+2. Uncheck the **Use Nerd Fonts (Icons)** checkbox.
 3. Tuim immediately replaces Nerd Font glyphs with standard Unicode and ASCII indicators (`📁`, `📄`, `*`, `+`, `-`).
-4. Eliminates broken or unrendered question-mark glyphs (``).
+4. Eliminates missing glyph boxes or broken question-mark symbols.
 
 ---
 

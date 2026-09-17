@@ -59,7 +59,7 @@ The smoke test checks:
 Tagged releases (`git tag v0.3.0 && git push origin v0.3.0`) trigger `.github/workflows/release.yml`:
 1. **Cross-Compilation**: Compiles release artifacts across Linux and macOS runner matrices.
 2. **Neovim Bundling**: Packages a verified, private Neovim runtime into each bundle.
-3. **AppImage Assembly**: Packages and signs the Linux AppImage.
+3. **AppImage Assembly**: Packages the Linux AppImage with bundled Neovim and desktop assets.
 4. **Checksum Generation**: Generates `SHA256SUMS` and individual `.sha256` files.
 5. **Asset Publication**: Creates the GitHub Release draft and uploads all artifacts.
 
