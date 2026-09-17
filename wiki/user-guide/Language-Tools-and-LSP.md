@@ -38,7 +38,7 @@ When you open a project, Tuim inspects root directory markers to identify the pr
 | **Lua** | `.luarc.json`, `stylua.toml` | `lua_ls` |
 
 > [!NOTE]
-> Projects without recognizable markers remain manual; Tuim will never automatically download or install unrequested tools behind your back.
+> If no project markers are detected in the root directory, Tuim falls back to the active buffer's file extension (`.zig`, `.rs`, `.py`, `.go`, `.c`, `.cpp`, `.js`, `.ts`, `.lua`) to recommend the appropriate server. Tuim never automatically installs tools without your initiation.
 
 ---
 

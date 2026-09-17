@@ -47,10 +47,10 @@ The Git panel displays all modified, added, deleted, and untracked files in your
 
 ## 4. Background Refresh & Non-Blocking Updates
 
-Git operations in Tuim are executed through Tuim's background task runner (`src/task_runner.zig`). 
-* Git status checks and diff computations run asynchronously on bounded worker threads.
-* UI rendering remains 100% fluid—typing in the editor never freezes or drops frames while Git status updates.
-* Generation counters ensure that slow or stale Git task completions are automatically discarded if your working tree state has changed in the meantime.
+Git status monitoring in Tuim is powered by Tuim's background task runner (`src/task_runner.zig`):
+* Background status checks and diff computations run asynchronously on bounded worker threads, ensuring the UI and editor remain 100% fluid.
+* Interactive mutations (staging, unstaging, and committing) execute directly and immediately trigger a status refresh.
+* Generation counters ensure that slow or stale Git status completions are automatically discarded if your working tree state has changed in the meantime.
 
 ---
 

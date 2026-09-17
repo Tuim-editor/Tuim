@@ -62,14 +62,18 @@ Inside Tuim, open <kbd>F1</kbd> → **Settings** → **About** to see:
 
 ## 3. Uninstalling Tuim
 
-Tuim includes an official uninstaller script `uninstall.sh` that provides safe, selective options.
+Tuim provides an official uninstaller script `uninstall.sh` that offers safe, selective removal options. If you have the repository checked out, run `bash uninstall.sh`. If you installed via the curl installer or a release bundle and do not have the repository cloned, you can run the script directly via `curl`.
 
 ### A. Binary Only Removal (Keeps Your Settings & Data)
 
 If you want to remove the `tuim` executable launcher while keeping your preferences, plugins, and custom configurations intact:
 
 ```bash
+# From repository:
 bash uninstall.sh --binary
+
+# Or via curl:
+curl -fsSL https://raw.githubusercontent.com/Rouboufy/tuim/main/uninstall.sh | bash -s -- --binary
 ```
 
 ### B. Complete Clean Removal
@@ -77,7 +81,11 @@ bash uninstall.sh --binary
 To remove Tuim completely, including all configuration files, installed plugins, compiled Treesitter parsers, runtime state, and caches:
 
 ```bash
+# From repository:
 bash uninstall.sh --all
+
+# Or via curl:
+curl -fsSL https://raw.githubusercontent.com/Rouboufy/tuim/main/uninstall.sh | bash -s -- --all
 ```
 
 > [!WARNING]

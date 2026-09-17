@@ -8,7 +8,7 @@ Understanding this architecture is key to knowing which plugins work seamlessly 
 
 ## 1. Verified & Shipped Bundled Plugins
 
-The following core plugins are bundled and verified via `scripts/plugin_smoke.sh` and continuous integration:
+The following core plugins are bundled and verified via local verification scripts (`scripts/plugin_smoke.sh`) and continuous integration test suites (`tests/plugin_manager.py` and `tests/plugins_ui.py`):
 
 | Plugin | Verified Role | Notes |
 | :--- | :--- | :--- |

@@ -78,7 +78,8 @@ Communication with Neovim is implemented via custom MessagePack encoders and dec
 
 The Extensions catalog search and marketplace parser is a standalone Python script embedded directly into the Tuim executable and extracted to the data directory at runtime:
 * Exposes a clean JSON-over-stdout interface.
-* Performs offline catalog queries, inventory scans, and release asset lookups without pulling heavy Python runtime dependencies into the Zig core.
+* Performs offline scans of installed plugins and local configurations.
+* Queries the marketplace catalog, refreshing `db_minified.json` from GitHub in the background whenever the local cache is missing or older than 24 hours.
 
 ---
 

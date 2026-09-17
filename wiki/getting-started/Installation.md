@@ -67,6 +67,8 @@ If you prefer a single portable executable or are in a restricted environment, T
 1. Download the latest AppImage and checksum from [GitHub Releases](https://github.com/Rouboufy/tuim/releases/latest):
    ```bash
    wget https://github.com/Rouboufy/tuim/releases/latest/download/Tuim-linux-x86_64.AppImage
+   wget https://github.com/Rouboufy/tuim/releases/latest/download/SHA256SUMS
+   sha256sum --ignore-missing -c SHA256SUMS
    chmod +x Tuim-linux-x86_64.AppImage
    ```
 2. Move it to a directory in your `PATH`:

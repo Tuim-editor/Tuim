@@ -27,7 +27,7 @@ The Extensions interface features two main tabs:
 | <kbd>/</kbd> | Open search bar to filter plugins by name or keyword |
 | <kbd>r</kbd> | Refresh plugin catalog |
 | <kbd>↑</kbd> / <kbd>↓</kbd> | Select plugin from the list |
-| <kbd>Enter</kbd> | Open plugin details (compact terminals) or Install/Reinstall plugin |
+| <kbd>Enter</kbd> | Open plugin details (compact terminals) or Install uninstalled plugin |
 | <kbd>Esc</kbd> | Return to plugin list, or close Extensions and return to editor |
 
 > [!NOTE]

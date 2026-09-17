@@ -21,9 +21,9 @@ The Settings window is organized into dedicated tabs:
 
 ## 2. General Settings
 
-* **System Clipboard**: Toggle synchronization with the host system clipboard (`wl-clipboard`, `xclip`, `pbcopy`, or `win32yank`).
 * **Editing Mode**: Switch default editing style between `Normal` (modal Vim motions), `IDE` (modeless), or `Zen`.
 * **Autocomplete**: Toggle the automatic completion popup (`blink.cmp`) on or off.
+* **Autoindent**: Toggle automatic code indentation when inserting new lines.
 
 ---
 
@@ -70,7 +70,7 @@ The About panel gives you an instant health and diagnostic snapshot:
 * **Data**: Path to active data directory (`~/.local/share/tuim`).
 * **Settings**: Path to active settings JSON file.
 * **Log**: Exact path to the active runtime log file (`~/.local/share/tuim/tuim.log`).
-* **Update button**: On AppImage builds, checks for newer releases and updates the binary in-place.
+* **Update button**: Checks for newer releases and launches the software updater (atomically updating the AppImage when `$APPIMAGE` is present, or rerunning the installer for native installs).
 
 ---
 
