@@ -72,6 +72,13 @@ def run_mode(mode):
                 tmux("set-option", "-t", "ui", "remain-on-exit", "on")
             wait_for(lambda: file.name in screen(), "editor did not open")
 
+        def open_file(file):
+            if mode == "ide":
+                send("C-o")  # One Normal command while IDE mode is in Insert.
+            text(":edit " + str(file))
+            send("Enter")
+            wait_for(lambda: file.name in screen().splitlines()[0], f"{file.name} did not open")
+
         try:
             launch()
             insert("changed ")
@@ -125,6 +132,59 @@ def run_mode(mode):
             assert new_file.exists(), "new buffer was not saved"
             assert "new buffer edit" in new_file.read_text(), f"new buffer content was wrong: {new_file.read_text()!r}"
 
+            # Cancel after saving one of two named buffers must leave the
+            # other modified and allow the user to retry quitting.
+            second = base / "second.txt"
+            second.write_text("second original\n")
+            launch()
+            insert("first named edit ")
+            open_file(second)
+            insert("second named edit ")
+            send("C-q")
+            wait_for(lambda: f'Save changes to "{second}"?' in screen(), "current named buffer did not prompt first")
+            send("y")
+            wait_for(lambda: f'Save changes to "{sample}"?' in screen(), "earlier named buffer did not prompt second")
+            send("c")
+            wait_for(lambda: "Save changes" not in screen(), "Cancel after a partial save did not return to Tuim")
+            assert not dead()
+            assert "first named edit " not in sample.read_text(), "Cancel wrote the unsaved first buffer"
+            assert "second named edit " in second.read_text(), "Save did not write the second buffer"
+            send("C-q")
+            wait_for(lambda: f'Save changes to "{sample}"?' in screen(), "remaining modified buffer did not prompt")
+            send("y")
+            wait_for(dead, "saving the remaining named buffer did not exit")
+            assert "first named edit " in sample.read_text()
+
+            # Ctrl+Q must route to the editor even when another region has
+            # focus. Exercise Cancel and Save from the sidebar.
+            launch()
+            insert("sidebar pending ")
+            send("F6", "C-q")
+            wait_for(lambda: "Save changes" in screen(), "sidebar-focused quit did not prompt")
+            send("c")
+            wait_for(lambda: "Save changes" not in screen(), "sidebar Cancel did not return to Tuim")
+            assert not dead() and "sidebar pending " not in sample.read_text()
+            send("F6", "C-q")
+            wait_for(lambda: "Save changes" in screen(), "sidebar-focused Save did not prompt")
+            send("y")
+            wait_for(dead, "sidebar-focused Save did not exit")
+            assert "sidebar pending " in sample.read_text()
+
+            # The terminal panel uses a separate Neovim instance; its focus
+            # must be reset so the editor receives the confirmation response.
+            launch()
+            insert("terminal pending ")
+            send("C-t", "C-q")
+            wait_for(lambda: "Save changes" in screen(), "terminal-focused quit did not prompt")
+            send("c")
+            wait_for(lambda: "Save changes" not in screen(), "terminal Cancel did not return to Tuim")
+            assert not dead() and "terminal pending " not in sample.read_text()
+            send("C-t", "C-t", "C-q")
+            wait_for(lambda: "Save changes" in screen(), "terminal-focused Discard did not prompt")
+            send("n")
+            wait_for(dead, "terminal-focused Discard did not exit")
+            assert "terminal pending " not in sample.read_text()
+
             # A failed write must leave Tuim alive with the edit intact.
             missing = base / "missing-directory" / "unwritable.txt"
             launch(missing)
@@ -141,6 +201,13 @@ def run_mode(mode):
             )
             assert not dead(), f"failed write exited Tuim; file_exists={missing.exists()} prompt={failed_prompt!r}"
             assert not missing.exists()
+            if "Press ENTER or type command to continue" in screen():
+                send("Enter")
+            wait_for(lambda: "Save changes" not in screen() and "keep this edit" in screen(), "failed write lost the buffer")
+            send("C-q")
+            wait_for(lambda: "Save changes" in screen(), "failed write did not leave the buffer modified")
+            send("c")
+            assert not dead() and not missing.exists()
         finally:
             subprocess.run(["tmux", "-S", socket, "kill-server"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 

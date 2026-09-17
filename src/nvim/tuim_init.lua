@@ -318,7 +318,7 @@ local plugins_setup = {
                 table.insert(buttons, { type = "padding", val = 1 })
                 table.insert(buttons, button(raw_commands, "Command menu", "<cmd>lua vim.rpcnotify(1, 'tuim_open_commands')<cr>", true))
                 table.insert(buttons, button(raw_help, "Help", "<cmd>HelpMenu<cr>", true))
-                table.insert(buttons, button(raw_quit, "Quit", "<cmd>qa<cr>", true))
+                table.insert(buttons, button(raw_quit, "Quit", "<cmd>confirm qa<cr>", true))
                 dashboard.section.buttons.val = buttons
                 local content_height = 1 + dashboard.config.layout[3].val + #buttons
                 dashboard.config.layout[1].val = math.max(0, math.floor((height - content_height) / 2))
