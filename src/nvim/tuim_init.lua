@@ -318,7 +318,7 @@ local plugins_setup = {
                 table.insert(buttons, { type = "padding", val = 1 })
                 table.insert(buttons, button(raw_commands, "Command menu", "<cmd>lua vim.rpcnotify(1, 'tuim_open_commands')<cr>", true))
                 table.insert(buttons, button(raw_help, "Help", "<cmd>HelpMenu<cr>", true))
-                table.insert(buttons, button(raw_quit, "Quit", "<cmd>qa<cr>", true))
+                table.insert(buttons, button(raw_quit, "Quit", "<cmd>lua _G.tuim_confirm_quit()<cr>", true))
                 dashboard.section.buttons.val = buttons
                 local content_height = 1 + dashboard.config.layout[3].val + #buttons
                 dashboard.config.layout[1].val = math.max(0, math.floor((height - content_height) / 2))
@@ -914,6 +914,69 @@ _G.tuim_new_primary_buffer = function()
     vim.cmd("enew")
 end
 
+local function tuim_find_safe_unnamed_name(used_names, counter_ref)
+    while true do
+        local candidate = (counter_ref.value == 0) and 'Untitled' or string.format('Untitled-%d', counter_ref.value)
+        counter_ref.value = counter_ref.value + 1
+        if not vim.uv.fs_stat(candidate) and not used_names[candidate] then
+            used_names[candidate] = true
+            return candidate
+        end
+    end
+end
+
+local quit_in_progress = false
+
+-- Quit Tuim with confirmation of unsaved changes.
+-- Ensures unnamed buffers are given unique, non-colliding names before :confirm qall
+-- so that an existing "Untitled" file on disk is never overwritten and multiple unnamed
+-- buffers do not overwrite each other. Reverts names if the user cancels.
+_G.tuim_confirm_quit = function()
+    if quit_in_progress then return end
+    quit_in_progress = true
+
+    local bufs = vim.api.nvim_list_bufs()
+    local renamed = {}
+    local used_names = {}
+
+    for _, b in ipairs(bufs) do
+        if vim.api.nvim_buf_is_valid(b) and vim.bo[b].buflisted then
+            local fname = vim.api.nvim_buf_get_name(b)
+            if fname ~= '' then
+                used_names[vim.fn.fnamemodify(fname, ':t')] = true
+            end
+        end
+    end
+
+    local counter_ref = { value = 0 }
+    for _, b in ipairs(bufs) do
+        if vim.api.nvim_buf_is_valid(b) and vim.bo[b].modified and vim.api.nvim_buf_get_name(b) == '' and vim.bo[b].buftype == '' then
+            local name = tuim_find_safe_unnamed_name(used_names, counter_ref)
+            vim.api.nvim_buf_set_name(b, name)
+            table.insert(renamed, { buf = b, name = name })
+        end
+    end
+
+    pcall(vim.cmd, 'confirm qall')
+
+    -- If confirm qall returns, Neovim did not exit (user cancelled or write failed).
+    -- Restore the name of any buffer that was not saved to disk so it remains [No Name].
+    for _, item in ipairs(renamed) do
+        if vim.api.nvim_buf_is_valid(item.buf) and not vim.uv.fs_stat(item.name) then
+            pcall(vim.api.nvim_buf_set_name, item.buf, '')
+            for _, b in ipairs(vim.api.nvim_list_bufs()) do
+                if vim.api.nvim_buf_is_valid(b) and not vim.bo[b].buflisted and not vim.api.nvim_buf_is_loaded(b) then
+                    if vim.fn.fnamemodify(vim.api.nvim_buf_get_name(b), ':t') == item.name then
+                        pcall(vim.api.nvim_buf_delete, b, { force = true })
+                    end
+                end
+            end
+        end
+    end
+
+    quit_in_progress = false
+end
+
 -- Close a specific buffer from Tuim's tab strip.  Using nvim_buf_delete
 -- directly gives modified buffers no confirmation UI, which makes the close
 -- button appear broken.  Select the requested buffer first so Neovim can show
@@ -944,7 +1007,31 @@ _G.tuim_close_buffer = function(bufnr)
 
     if vim.bo[bufnr].modified then
         if vim.api.nvim_get_current_buf() ~= bufnr then _G.tuim_select_buffer(bufnr) end
+        local was_unnamed = vim.api.nvim_buf_get_name(bufnr) == '' and vim.bo[bufnr].buftype == ''
+        local safe_name = nil
+        if was_unnamed then
+            local used_names = {}
+            for _, b in ipairs(vim.api.nvim_list_bufs()) do
+                if vim.api.nvim_buf_is_valid(b) and vim.bo[b].buflisted then
+                    local fn = vim.api.nvim_buf_get_name(b)
+                    if fn ~= '' then used_names[vim.fn.fnamemodify(fn, ':t')] = true end
+                end
+            end
+            local counter_ref = { value = 0 }
+            safe_name = tuim_find_safe_unnamed_name(used_names, counter_ref)
+            vim.api.nvim_buf_set_name(bufnr, safe_name)
+        end
         vim.cmd('confirm bdelete ' .. bufnr)
+        if was_unnamed and vim.api.nvim_buf_is_valid(bufnr) and safe_name and not vim.uv.fs_stat(safe_name) then
+            pcall(vim.api.nvim_buf_set_name, bufnr, '')
+            for _, b in ipairs(vim.api.nvim_list_bufs()) do
+                if vim.api.nvim_buf_is_valid(b) and not vim.bo[b].buflisted and not vim.api.nvim_buf_is_loaded(b) then
+                    if vim.fn.fnamemodify(vim.api.nvim_buf_get_name(b), ':t') == safe_name then
+                        pcall(vim.api.nvim_buf_delete, b, { force = true })
+                    end
+                end
+            end
+        end
     else
         vim.api.nvim_buf_delete(bufnr, {})
     end
@@ -2381,7 +2468,7 @@ local TUIM_KEYS = {
     "",
     "  ── VSCODE-LIKE ESSENTIALS ──────────────────────────────────────",
     "  Ctrl+S                 Save file",
-    "  Ctrl+Q                 Force quit Tuim",
+    "  Ctrl+Q                 Quit Tuim (confirm unsaved changes)",
     "  Ctrl+W                 Close current Tab/Buffer",
     "  Ctrl+N / Ctrl+T        Open new Tab/Buffer",
     "  Ctrl+Tab               Next Tab",

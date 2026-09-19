@@ -107,7 +107,6 @@ pub const App = struct {
     last_explorer_refresh: i64 = 0,
 
     show_split_menu: bool = false,
-    quit_requested: bool = false,
     split_menu_dir: enum { right, bottom } = .right,
     split_menu_x: u16 = 0,
     split_menu_y: u16 = 0,
@@ -115,6 +114,7 @@ pub const App = struct {
     editor_win_count: usize = 1,
     terminal_win_count: usize = 1,
     deferred_exit: @import("../nvim/call_sites_05c.zig").DeferredExit = .none,
+    quit_pending: bool = false,
 
     sidebar_focus: bool = false,
     workspace: @import("workspace.zig").State = .{},

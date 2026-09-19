@@ -21,6 +21,11 @@ fn zenSessionSaved(context: ?*anyopaque, completion: *Completion) anyerror!void 
     const application: *App = @ptrCast(@alignCast(context.?));
     if (!async_effects.applyDeferredExit(&application.deferred_exit, .zen_handoff, completion)) application.notify(.failure, "Unable to save the Zen handoff session.", .{});
 }
+
+fn quitConfirmationFinished(context: ?*anyopaque, _: *Completion) anyerror!void {
+    const application: *App = @ptrCast(@alignCast(context.?));
+    application.quit_pending = false;
+}
 const layout_mod = @import("layout.zig");
 const Layout = layout_mod.Layout;
 const settings = @import("widgets/settings.zig");
@@ -766,11 +771,16 @@ pub fn handleKey(a: *App, k: input.KeyEvent, layout: Layout) !bool {
         try workspaceAction(a, .find_file, layout);
         return true;
     } else if (quit) {
-        a.quit_requested = true;
-        const cmd_p = [1]Value{.{ .string = "vim.cmd('qa!')" }};
-        const params = [2]Value{ cmd_p[0], .{ .array = &[_]Value{} } };
-        a.rpc.notify("nvim_exec_lua", &params) catch {};
-        a.rpc_term.notify("nvim_exec_lua", &params) catch {};
+        if (a.quit_pending) return true;
+        a.quit_pending = true;
+        a.sidebar_focus = false;
+        a.terminal_focus = false;
+        const cmd_p = [1]Value{.{ .string = "_G.tuim_confirm_quit()" }};
+        const params = [2]Value{ cmd_p[0], .{ .array = &.{} } };
+        _ = a.rpc.requestAsyncWithHandler("nvim_exec_lua", &params, a, quitConfirmationFinished) catch |err| {
+            a.quit_pending = false;
+            a.notify(.failure, "Unable to quit: {}", .{err});
+        };
         return true;
     }
 

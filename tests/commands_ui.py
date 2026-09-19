@@ -145,7 +145,7 @@ def run(capture=None):
             grid = wait_for(lambda s: "second" in s, "Buffer query missing")
             row = next(i for i, line in enumerate(grid.splitlines()[4:18], 4) if "second.zig" in line[18:82])
             text(f"\x1b[<0;22;{row + 1}M\x1b[<0;22;{row + 1}m")
-            wait_for(lambda s: "Open buffers /" not in s and "const second = true;" in s, "Mouse did not activate buffer")
+            wait_for(lambda s: "Open buffers /" not in s and "second.zig" in s.splitlines()[0], "Mouse did not activate buffer")
 
             # Native buffer selection stays available in Zen and small windows.
             send("F11", "F4")

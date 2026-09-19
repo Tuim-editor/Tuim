@@ -144,7 +144,16 @@ def run_mode(mode):
         status = 0
         deadline = time.monotonic() + 8.0
         while time.monotonic() < deadline:
-            os.write(fd, b"\x11")  # Ctrl-Q
+            waited, status = os.waitpid(pid, os.WNOHANG)
+            if waited != 0:
+                break
+            try:
+                os.write(fd, b"\x11")  # Ctrl-Q
+            except OSError:  # EIO: the child closed the pty already
+                waited, status = os.waitpid(pid, os.WNOHANG)
+                if waited != 0:
+                    break
+                raise
             output.extend(read_available(fd, min(deadline, time.monotonic() + 0.4)))
             waited, status = os.waitpid(pid, os.WNOHANG)
             if waited != 0:
