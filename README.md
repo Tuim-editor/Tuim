@@ -1,5 +1,7 @@
 # Tuim
 
+> **Meet [Rtuim, the Rust rewrite of Tuim](https://github.com/Tuim-editor/Rtuim).** We recoded the app's frontend from Zig to Rust, keeping Neovim as the editing engine. Rtuim is also open source under the **MIT license**. Visit the [Rtuim repository](https://github.com/Tuim-editor/Rtuim) for the Rust source, build instructions, and development updates. This repository contains the original Zig implementation.
+
 **Your editor. Your terminal.**
 
 Tuim is a terminal workspace written in Zig, with Neovim as its editing engine.
@@ -273,3 +275,4 @@ Tuim is built on top of and inspired by an incredible open-source ecosystem. Spe
 ## License
 
 [MIT](LICENSE).
+
